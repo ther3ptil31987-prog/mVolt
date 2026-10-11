@@ -1,10 +1,9 @@
 # mVolt+ user guide
 
-**For mVolt+ v0.47.3** · [Back to the project](../README.md) · [Releases](https://github.com/b00nz/mVolt/releases/latest)
+**For mVolt+ v0.50.1** · [Back to the project](../README.md) · [Releases](https://github.com/b00nz/mVolt/releases/latest)
 
-This guide covers dashboard controls, profiles, monitoring and startup. Expand
-a section for details. Screenshots show v0.47.2 on an RTX 5090. The profiles and
-tuning values shown are examples, not recommended settings.
+This guide covers tuning, profiles, monitoring and startup. Expand a section
+for details. Screenshots show v0.50.1. Shown values are examples, not recommendations.
 
 ## Find your way
 
@@ -14,6 +13,8 @@ tuning values shown are examples, not recommended settings.
 | [First start and tile presets](#first-start-and-tile-presets) | Three starting layouts and the complete tile table |
 | [Dashboard control reference](#dashboard-control-reference) | Every tile, grouped as it appears in the app |
 | [Power cap in watts](#power-cap-in-watts) | Watt targets, percentage limits and Reset |
+| [Extend limits using BIOS override](#extend-limits-using-bios-override) | Load a BIOS copy, change ceilings and restore limits |
+| [BIOS copy](#bios-copy) | Save a copy with GPU-Z or NVFlash |
 | [Thermal inputs](#thermal-inputs) | Fixed inputs to VFE, Default, Reset and profiles |
 | [Voltage limits and measured voltage](#voltage-limits-and-measured-voltage) | VMIN, REL, ALT/OP, OV, linked editing and MAX |
 | [V/F Curve Editor](#vf-curve-editor) | Core and MSVDD curves, point edits, profiles and Core locks |
@@ -40,7 +41,7 @@ The profile selector shows the recognized saved profile or **Custom**.
 | **Enabled** | Allows editing and includes this control when you Apply or restore settings after sleep |
 | **Disabled** | Leaves this control out of normal Apply; its existing applied value remains |
 | **Target** | The value you are editing; moving a slider updates it immediately |
-| **Applied** | The setting currently reported by the GPU |
+| **Applied** | The setting currently reported by the driver, separate from measured behavior |
 | **Live** | A changing measurement, such as clock, watts or RPM |
 | **Allowed** | The editing range available in the current configuration |
 | **Review…** | Lists pending changes before you apply them |
@@ -53,6 +54,7 @@ The profile selector shows the recognized saved profile or **Custom**.
 **Disabling a tile leaves it out of Apply and restoration after sleep; it does not reset it.**
 Its applied value can still reflect tuning from mVolt+ or another application.
 Enable the tile to use its Reset button, or use the dashboard's explicit Reset all.
+Minimal uses shared actions and row context menus instead of per-card buttons.
 
 Slider, stepper and text edits are pending until Apply. A card-specific Apply
 acts on that card; **Apply fans** acts on the fan tile. Other edits remain pending.
@@ -100,6 +102,7 @@ logon or for command-line/read-only launches.
 | Fan control | ✓ | ✓ | ✓ |
 | Power limit (%) | ✓ | ✓ | ✓ |
 | Power cap (watts) | ✓ | ✓ | ✓ |
+| Board input current | ✓ | ✓ | ✓ |
 | Core voltage limits | — | ✓ | ✓ |
 | MSVDD voltage limits | — | ✓ | ✓ |
 | Core voltage offset | — | ✓ | ✓ |
@@ -111,12 +114,13 @@ logon or for command-line/read-only launches.
 | MSVDD OCP limit | — | — | ✓ |
 | NVVDD / MSVDD clock ratio | — | — | ✓ |
 | Thermal inputs | — | — | ✓ |
-| **Visible tiles** | **10** | **16** | **20** |
+| Thermal limit | — | — | ✓ |
+| **Visible tiles** | **11** | **17** | **22** |
 
 Visibility does not guarantee hardware support; an unsupported control remains
 unavailable. Hiding a tile does not change its value or whether it is included
 in Apply and profiles. Voltage boost, Fan control and both power tiles are
-included in every preset.
+included in every preset, along with Board input current.
 
 ## Dashboard control reference
 
@@ -137,8 +141,9 @@ the corresponding limit; positive offsets raise it. The driver baseline can move
 with operating conditions, so the resulting limits can change while your offsets
 stay fixed.
 
-The card shows the **Current effective maximum** and evaluated limits separately
-from its editable offsets. They describe voltage policy, not physical voltage.
+In Standard, **Applied** shows the current minimum and effective maximum;
+**Allowed** shows the rail's current editing ceiling. Details remain in hover
+help. These are voltage-policy readings, not measured voltage or pending edits.
 Use the range slider and Min/Max fields, or select individual offset controls
 in Settings. In the offset view, REL and ALT/OP can be linked or edited separately.
 
@@ -345,6 +350,8 @@ tools are not always directly comparable. Reset clears the memory offset.
 
 Targets are checked against the driver's current offset range. Profiles and
 the CLI use the same range checks as dashboard Apply.
+To change the available ceiling where supported, use
+[Extend limits using BIOS override](#extend-limits-using-bios-override).
 
 </details>
 
@@ -362,20 +369,33 @@ The range comes from the selected GPU. In Telemetry, compare **Requested limit**
 **Enforced limit** and measured board power: they are different readings, and
 enforcement can lag a request. Reset restores the board's default limit.
 
-Percentage editing is disabled while a watt cap is selected or active. Its last
-applied percentage can still limit power. Use **Reset** on the watt-cap tile to
+Percentage editing is disabled while a watt cap is selected or active.
+Use **Reset** on the watt-cap tile to
 return to percentage editing; see [Power cap in watts](#power-cap-in-watts).
 
 </details>
 
 <details>
-<summary><strong>Power cap (watts)</strong> — an additional board-power limit</summary>
+<summary><strong>Power cap (watts)</strong> — a board-power budget in watts</summary>
 
-Sets a watt cap while preserving the existing percentage request. The card
-shows Target, Applied, Live and Allowed. Reset immediately returns to percentage
-control without resetting that percentage to 100%.
+Sets a watt cap and, on supported GPUs, aligns the board-power request with it.
+Standard shows Target, Applied, Live and Allowed; Minimal uses a compact row.
+Reset returns to percentage control without resetting it to 100%.
 
 See [Power cap in watts](#power-cap-in-watts) for examples, limits and persistence.
+
+</details>
+
+<details>
+<summary><strong>Board input current</strong> — board-current limit, in amperes</summary>
+
+Sets the board's input-current request independently of its power budget and
+the NVVDD/MSVDD output OCP limits. Enable the tile, enter amps, then Apply.
+Values support up to three decimal places within the current driver range.
+
+Applied is the requested limit, not measured current. Reset restores the
+driver-reported default. Profiles and Overview include this setting; disabling
+the tile or closing mVolt+ does not undo it.
 
 </details>
 
@@ -409,6 +429,18 @@ and saving profiles.
 </details>
 
 <details>
+<summary><strong>Thermal limit</strong> — GPU-temperature limit</summary>
+
+Adjusts the requested thermal limit in °C. Lower values can make thermal
+limiting reduce clocks sooner. Reset restores the saved pre-edit thresholds.
+This is separate from fixed [Thermal inputs](#thermal-inputs).
+
+Higher entries do not guarantee a higher effective limit. Enforcement above
+the original limit, and interaction with fixed thermal inputs, remain experimental.
+
+</details>
+
+<details>
 <summary><strong>Fan control</strong> — fixed duty for all fans or individual channels</summary>
 
 Sets a fixed fan duty, in percent. Each slider follows a driver-reported fan
@@ -437,6 +469,9 @@ normal idle downclocking. It can raise idle power consumption. It does not remov
 voltage, power or thermal limits, nor guarantee a particular frequency.
 Click it again to release the request. Boost lock is an immediate action and is
 not stored in either normal profiles or full snapshots.
+
+Set a global **Toggle Boost Lock** shortcut in [Settings → Hotkeys](#hotkeys).
+It works while mVolt+ is running, including in the tray.
 
 It is separate from **Voltage boost** and **GPU clock range**. mVolt+ allows a
 clock range and Boost lock together; evaluate their combined behavior on your
@@ -486,9 +521,9 @@ an applied fixed input.
 
 ## Power cap in watts
 
-**Power cap (watts)** sets an additional board-power request. It can reduce power
-below the percentage slider's minimum, but cannot raise the driver's ordinary
-maximum. It is part of normal mVolt+ and does not install a separate kernel driver.
+**Power cap (watts)** sets a board-power budget. It can cap power below the
+percentage slider's minimum and uses the currently available maximum, including
+verified [extended limits](#extend-limits-using-bios-override).
 
 Enable the tile, enter a watt target, then choose **Apply changes**. New targets
 start at **1 W**, accept up to three decimal places, and must fit the current
@@ -497,21 +532,21 @@ reported maximum.
 | Tile line | What it means |
 | --- | --- |
 | **Target** | The watt value being edited |
-| **Applied** | The additional cap read back from the driver, or **No cap** when no request exists |
+| **Applied** | The cap read back from the driver, or **No cap** when no request exists |
 | **Live** | Measured board power, using the same reading as the percentage tile |
 | **Allowed** | 1 W through the driver's current maximum |
 | **Pending** | An edit waiting for Apply; it is not yet the applied cap |
 
 ### Percentage and watt limits together
 
-Applying a watt cap leaves the previous percentage setting in place. The lower
-limit can constrain power, along with other thermal, voltage and current limits.
-For a GPU whose 100% setting is 800 W:
+Use percentage or watts to choose the power budget. On supported GPUs, applying
+a watt target also updates the board-power request, so an older percentage
+setting does not keep that request lower. Below the ordinary minimum, the watt
+cap still provides the lower ceiling.
 
-| Existing percentage setting | New watt cap | Lower power request |
-| --- | --- | --- |
-| 100% / 800 W | 200 W | 200 W |
-| 50% / 400 W | 600 W | 400 W |
+Some GPUs support only an additional cap. On those systems, the existing
+percentage request remains separate and the lower request can limit power.
+Check **Requested limit** and **Enforced limit** in Telemetry → Power.
 
 A cap is a ceiling, not a target for consumption. An idle GPU or a light workload
 can draw much less than the applied value.
@@ -522,6 +557,7 @@ can draw much less than the applied value.
 the percentage limit can take over. It keeps your percentage setting and leaves
 other pending edits alone. Applied may still show a watt value because the cap
 has been raised, not deleted.
+In Minimal, right-click the power-cap row and choose **Reset power cap**.
 
 Disabling or hiding the tile, resetting app preferences, or closing mVolt+ does
 not remove an applied cap. A cap from another application can also disable
@@ -549,15 +585,17 @@ controls. Existing saved view preferences are preserved.
 The range slider's lower handle and **Min** field adjust VMIN. Its upper handle
 and **Max** field calculate REL and ALT/OP offsets separately from their current
 baselines. These fields show estimated voltages in mV. **OV can still restrict the
-effective maximum.** Adjust OV separately when supported.
+effective maximum.** Its independent switch includes or excludes OV from Apply;
+turning it off does not clear an already-applied offset.
 
 In the offset view, fields show signed mV offsets directly. REL and ALT/OP can be
 linked or edited separately. Both views edit the same pending settings;
 changing views alone does not apply or reset them.
 
 The range view estimates the result from current baselines. It does not hold an
-absolute voltage when the driver later changes those baselines. Compare
-**Current effective maximum** with measured voltage after applying.
+absolute voltage when the driver later changes those baselines. Standard's
+**Applied** line shows the readback minimum and effective maximum; **Allowed**
+shows the validated ceiling for that rail and mode. Details are in hover help.
 
 | Control or reading | What it means | Effect of changing it |
 | --- | --- | --- |
@@ -565,7 +603,7 @@ absolute voltage when the driver later changes those baselines. Compare
 | **Reliability offset (REL)** | Offset to the reliability voltage limit | Raising permits a higher REL limit; lowering makes it more restrictive. It does not force the rail to use that voltage. |
 | **Operating limit offset (ALT/OP)** | Offset to the maximum operating-voltage limit, also called Vop | Raising permits a higher operating limit; lowering makes it more restrictive. REL, OV and other active limits can still constrain the result. |
 | **Overvoltage offset (OV)** | Offset to the overvoltage policy ceiling | A sufficiently lower OV can constrain the effective maximum. Raising it may have no effect while another limit remains tighter. |
-| **Current effective maximum / MAX** | The driver's evaluated upper limit now | Read-only. Reports the current policy result, not pending edits or measured rail voltage. |
+| **Applied maximum / MAX** | The driver's evaluated upper limit now | Read-only. Reports the current policy result, not pending edits or measured rail voltage. |
 
 The numerical range a control accepts is not a recommended operating range.
 The voltage device's reported range is separate from the policy-offset ranges.
@@ -628,8 +666,9 @@ A saved **0 mV** offset means no offset. It does not ask mVolt+ to run Reset lat
 ## V/F Curve Editor
 
 The editor changes the frequency requested at individual voltage points.
-Choose **NVVDD → Core** or **MSVDD → XBAR, SYS or Video** above the graph.
-Available curves depend on your GPU and driver.
+Choose **Core**, **XBAR**, **SYS** or **Video** above the graph. The rail selector
+groups the curves by their reported rail; available curves depend on your GPU
+and driver.
 
 The horizontal axis is voltage in **mV**; the vertical axis is frequency in
 **MHz**. Each curve keeps its pending edits, selection, view and Undo/Redo history
@@ -734,18 +773,38 @@ Choose a mode based on who should adjust fan duty as temperature changes.
 | **Firmware automatic** | GPU firmware | Firmware continues | Firmware continues |
 | **Fixed duty**, from the fan tile | Your applied percent target | Duty remains fixed | Last duty remains fixed |
 | **mVolt+ fan curve** | mVolt+, using GPU temperature | Curve tracks temperature | Tracking stops; last duty remains fixed |
+| **GPU fan policies** (experimental) | GPU firmware | No software curve is required | mVolt+ does not reset the edited policy |
 
-**The custom fan curve is not uploaded to firmware.** Saving its points in a
+**The mVolt software curve is not uploaded to firmware.** Saving its points in a
 profile does not make firmware execute them. Use **Close window to tray** to
 hide the window while mVolt+ continues controlling the fans.
+
+The editor's **mVolt / GPU** selector chooses the controller to edit. Switching
+views keeps pending edits and does not apply anything. In **mVolt** mode, drag
+the graph or enter each point's **Temperature** and **Duty** directly.
+
+![mVolt software fan curve](../assets/mvolt-fan-curve.png)
+
+In **GPU** mode, choose a policy and edit its three temperatures; speed values
+stay fixed. **Apply** activates it and stops the mVolt software curve.
+**Restore original** restores the saved pre-edit policy, which is kept between
+launches and is not necessarily the card's factory setting.
+
+![GPU fan policy editor](../assets/mvolt-gpu-fan-curve.png)
+
+GPU policies can be saved in profiles and used with **Apply startup profile,
+then exit**. Saving captures the applied policy, not pending temperature edits.
+
+GPU mode is experimental. Policy numbers are not physical fan labels, and
+firmware response and reset/reboot persistence depend on the hardware.
 
 <details>
 <summary><strong>Build and apply a fan curve</strong></summary>
 
-1. Open **Fan Curve**. The graph maps GPU temperature to requested fan duty.
-2. Drag points to reshape the curve. Double-click to add a point; right-click
-   a point to remove it. The point list allows fine duty adjustments.
-3. Set the curve to **Enabled** and choose the fall hysteresis.
+1. Open **Fan Curve**, choose **mVolt** and set the curve to **Enabled**.
+2. Drag points or enter their temperature and duty. Double-click to add a point;
+   right-click a point to remove it.
+3. Choose the fall hysteresis.
 4. Click **Apply**. Pending edits do not replace the running curve before Apply.
 
 The software curve drives all reported channels together within their shared
@@ -848,7 +907,7 @@ Included curves and full snapshots still need current GPU readings.
 
 A profile without a particular curve leaves it unchanged. For example, an older
 profile with no XBAR curve neither resets the current XBAR curve nor shows an
-XBAR difference in **Differences from applied**. A curve disabled in the profile
+XBAR difference in **Preview changes**. A curve disabled in the profile
 also stays unchanged in normal mode.
 
 To save a reset curve in a full snapshot, select that curve, use **Reset V/F curve**,
@@ -868,7 +927,7 @@ releases a cap previously set by mVolt+.
 
 | Switching normal profiles | Result |
 | --- | --- |
-| A sets percentage power; B sets a watt cap | B's cap is applied. A's percentage request stays in place, so the lower request can limit power. |
+| A sets percentage power; B sets a watt cap | B's cap is applied. On supported GPUs, the board-power request follows B's watt target too. |
 | A sets a watt cap through mVolt+; B sets percentage power | mVolt+ first releases its cap, then applies B's percentage. |
 | A sets a watt cap; B changes only clocks | The cap remains applied. |
 | Another application sets a cap; B sets percentage power | mVolt+ does not automatically clear the other application's cap. Use the watt tile's Reset if you want to release it. |
@@ -878,15 +937,16 @@ are unavailable, unless those readings are needed to release a cap or recover
 the connection or an earlier operation. This also applies at logon and through
 profile shortcuts.
 
-Full snapshots save both the applied percentage limit and watt cap, even when
+Full snapshots save the exact applied power requests and watt cap, even when
 their switches are off. Pending edits are left out. If a snapshot was saved
 without a watt cap but a lower cap is now active, use Reset first. After Reset,
 the snapshot accepts the cap at the driver's maximum and leaves it there.
 
-**Versions without watt-cap support cannot open profile files containing that
-setting.** The first save in the new format keeps the previous file as
-`.before-power-cap.json`. Keep a backup before returning to one of those
-versions. Files without a watt-cap setting keep their previous format.
+Board input current, GPU fan policies and Thermal limit follow the same profile
+participation rules where supported. Older app versions may not read profiles
+saved with newer controls; keep the automatic migration backups when downgrading.
+BIOS-override ceilings are managed separately and are not installed by applying
+a tuning profile.
 
 ### Save, preview and apply
 
@@ -894,10 +954,10 @@ versions. Files without a watt-cap setting keep their previous format.
 | --- | --- |
 | Single-click a profile in the list | Shows its saved values without applying |
 | Double-click a profile in the list | Immediately applies that profile |
-| Save current settings as… | Opens Save profile with a preview of applied settings |
+| Save current settings ▾ → Save as new profile… | Opens a new profile form with a preview of applied settings |
 | Save profile | Saves applied settings in the chosen mode; pending edits stay in the editor |
-| Overwrite selected | Saves applied settings using the profile's existing mode; pending edits are not saved |
-| Differences from applied… | Compares the settings the profile would apply with current GPU values |
+| Save current settings ▾ → Update “name” | Updates that profile with applied settings, keeping its existing mode |
+| Preview changes… | Compares the settings the profile would apply with current GPU values |
 | Apply profile | Immediately applies the saved configuration |
 | Load for editing | Loads its values and switches for editing without applying them |
 | Restore backup | Restores the backup profile file without applying its settings |
@@ -912,15 +972,17 @@ Both modes save applied curve and fan settings, leaving out pending changes.
 A running fan curve's changing duty is a live reading, not a pending edit.
 Loading a normal profile with fan control disabled leaves a running fan curve alone.
 
-Profile Manager can be resized. At narrower widths, fields and action buttons
-wrap, with scrolling when needed. **Save current settings as…** is below the
-profile list; **New profile mode** and **Restore backup** are below the preview.
-Operation feedback appears beneath the profile actions.
+Profile Manager keeps the save actions together under **Save current settings ▾**.
+Both save paths capture applied settings in the background; pending edits stay
+in the editor. Longer previews scroll.
+
+![Profile Manager](../assets/mvolt-profiles.png)
 
 ### Global profile shortcuts
 
-Click **Global profile shortcut** and press a combination with Ctrl, Alt, Shift
-or Win. For an existing profile, the binding saves immediately without overwriting
+Click **Global profile shortcut** and press a modified key combination, such as
+**Ctrl+F5**. Shift alone and combinations reserved for normal typing are not accepted.
+For an existing profile, the binding saves immediately without overwriting
 its tuning values. A new profile saves its shortcut with the rest of the form.
 Backspace or Delete clears the shortcut. Shortcuts are suspended while this field
 has focus; a conflict or failed save retains the previous binding.
@@ -944,6 +1006,10 @@ mVolt+ waits for the GPU to become ready before applying your startup profile.
 You do not need to open NVIDIA Control Panel. If application fails, mVolt+
 reports the error without automatically repeating the Apply.
 
+If Windows confirms that the selected GPU is disconnected, automatic startup
+waits briefly and then exits quietly. Its startup task and profiles stay saved
+for when the GPU returns.
+
 If startup fails, mVolt+ records the reason and attempts a notification. The next
 time you open the app, it also shows the warning. Dismissing it does not retry Apply.
 
@@ -957,7 +1023,7 @@ time you open the app, it also shows the warning. Dismissing it does not retry A
 
 The logon task runs a separate copy under `%ProgramFiles%\mVolt+` with administrator
 privileges, configured for your Windows user and GPU. Opening mVolt+ as administrator
-updates an existing startup task and its executable.
+updates existing startup copies for this edition, including those for disconnected GPUs.
 
 An interrupted automatic Apply stops further automatic attempts. Once the GPU
 is available, use **Apply changes** or **Apply profile** manually. A successful
@@ -1042,7 +1108,7 @@ configuration, not instantaneous measured clocks; use Clocks for live measuremen
 </details>
 
 <details>
-<summary><strong>Temperatures</strong> — GPU, hotspot and memory junction</summary>
+<summary><strong>Temperatures</strong> — GPU, hotspot, memory and additional sensors</summary>
 
 Shows current GPU temperature, absolute GPU hotspot temperature and memory-junction
 temperature where available. Hotspot is an absolute sensor temperature, not
@@ -1052,6 +1118,12 @@ Hotspot availability is checked through the driver interface and returned data;
 it is not restricted to one GPU model or driver version. A card can support other
 tuning features without exposing this sensor. A retained **last known** hotspot
 reading is labelled rather than presented as a current sample.
+
+Where supported, this page also shows additional GPU sensors and individual
+memory temperature sites, with memory minimum, maximum and spread. Site numbers
+are sensor labels, not a map of physical chips. Missing readings stay unavailable.
+
+![Temperature readings](../assets/mvolt-temperatures.png)
 
 </details>
 
@@ -1113,6 +1185,22 @@ Examine errors and traffic together under comparable conditions.
 
 </details>
 
+<details>
+<summary><strong>GPU info</strong> — identity, silicon binning and Vrel</summary>
+
+Shows read-only Speedo, NVVDD/MSVDD Iddq and OC-bin readings where available.
+These are reported binning values, not an overclocking score or a promise of
+stable clocks.
+
+Each rail's **Firmware-reported Vrel** is shown beside its **Reported Vrel
+offset**. The offset is already accounted for in the reported limit; do not add
+it again. Vrel is a reliability voltage limit, not measured voltage or a
+maximum-safe-voltage recommendation. mVolt+ does not calculate a substitute value.
+
+![GPU info and firmware-reported Vrel](../assets/mvolt-gpu-info.png)
+
+</details>
+
 Telemetry updates live and keeps recent readings while mVolt+ is running.
 Closing the app clears that history. All monitoring views use the refresh
 interval in **Settings → Monitoring**.
@@ -1129,6 +1217,7 @@ Thermal inputs share one row in channel order **1 / 2 / 3 / 4 / 5**, with values
 separated by `/`; **Def.** means the corresponding fixed input is off.
 Each rail's voltage offsets are grouped together, and Core, XBAR, SYS and Video
 curves have separate summaries showing adjusted points out of the total.
+**Board input current** shows the applied current request in amperes.
 
 **Copy summary** copies current applied settings. **Always on top** keeps
 the window above other applications. Unapplied edits are not shown as applied.
@@ -1173,14 +1262,34 @@ required temperature checks.
 To use RTSS, run RivaTuner Statistics Server, enable **Show telemetry in the RTSS
 overlay**, and choose your readings. RTSS must also display its overlay in the
 target application. Overlay options are off by default. Voltage labels identify
-measured or firmware-requested readings.
+measured readings; firmware-requested voltage is not substituted in the overlay.
+
+Choose from GPU/driver identity, the applied profile, Boost Lock, rail voltages,
+core/memory/fabric clocks, GPU/hotspot/memory temperatures, fan duty/RPM, power
+versus enforced limit, GPU load and VRAM used/total. Missing or stale readings
+are omitted. VRAM usage is for the whole GPU, not just the current game.
+
+### Hotkeys
+
+Click **Toggle Boost Lock** and press a combination such as **Ctrl+F6**.
+The binding saves immediately for this GPU; Backspace or Delete clears it.
+It works while mVolt+ runs, including in the tray, and acts immediately.
+Profile shortcuts remain in [Profile Manager](#global-profile-shortcuts).
+Duplicate bindings and combinations that interfere with ordinary typing are refused.
 
 ### Appearance and dashboard organization
 
 Choose **Midnight** (the default), Graphite, Dark or Light, or customize the shared
-colors. Changes update the app's windows and are saved for the selected GPU.
+colors. Colors and the layout choice are shared across GPUs for this Windows user.
 **Reset colors** restores the default palette without changing tuning.
 **Voltage controls** selects the [range slider or offset view](#range-slider-and-offset-views).
+
+**Layout → Standard** shows cards with detailed readouts. **Minimal / Compact**
+uses compact rows with the same tuning controls and shared Apply/Discard actions.
+Hover for extra details. Fan control and Thermal inputs expand independently;
+collapsing them changes only their presentation. Changing layout keeps pending edits.
+
+![Minimal / Compact dashboard](../assets/mvolt-minimal.png)
 
 Click the leading **−/+** beside a section heading to collapse or expand it.
 Your scroll position is kept unless collapsing the section leaves less content
@@ -1218,6 +1327,115 @@ XOC follows the selected rail's reported device maximum where available. These
 are editing limits, not measured voltages or safe operating-voltage ratings.
 Both modes edit offsets; the resulting voltage limits can change with operating
 conditions.
+
+## Extend limits using BIOS override
+
+Open **Settings → Advanced tuning → Extend limits using BIOS override** to change
+supported ceilings for **Memory offset**, **Power limit** and **Board input current**.
+
+![Extend limits using BIOS override](../assets/mvolt-extended-limits.png)
+
+**This does NOT flash the card's BIOS.** The override is saved in this Windows
+installation and stays active across reboots until reverted. It does not turn
+the displayed limits into recommended settings or guarantee stability.
+
+### Load, save and apply
+
+1. Obtain a [BIOS copy](#bios-copy), preferably from your own card. If the current
+   BIOS is already available and the editor works, another import is unnecessary.
+2. Choose **Load BIOS file…** and select the copy. Loading only previews it.
+3. For a matching copy, enter the supported **New maximum** values and choose
+   **Save limits**.
+4. Choose **Restart GPU** or **Restart Windows**. Save work first; the display
+   may briefly go blank during a GPU restart. **Later** leaves the changes pending.
+5. Wait for the confirmation that the BIOS and limits are active and verified.
+6. Return to the dashboard, enter your tuning targets and choose **Apply changes**.
+
+**Saving a ceiling does not apply a memory offset, watt target or current target.**
+The last step is still required.
+
+| Column | Meaning |
+| --- | --- |
+| **Active maximum** | The ceiling currently read back from the driver |
+| **Theoretical max.** | Guidance only; not a guaranteed working or safe limit |
+| **New maximum** | The ceiling you want to save; it is not active yet |
+
+An unavailable row does not prevent another supported row from being used.
+Theoretical values are guidance, not a separate input cap. A higher entry may
+be accepted without producing a higher usable limit.
+
+### BIOS copy
+
+Keep an untouched copy from your card before changing its limits. Use either tool:
+
+- **[GPU-Z](https://www.techpowerup.com/gpuz/):** select the correct GPU, click the
+  save icon beside **BIOS Version**, choose **Save to file…**, and save the `.rom`.
+- **NVFlash:** use its BIOS-save option. For a system with one NVIDIA GPU, run
+  this from an administrator PowerShell window in the NVFlash folder:
+
+  ```powershell
+  .\nvflash64.exe --save bios.rom
+  ```
+
+On a system with multiple GPUs, select the intended adapter in the export tool
+before saving. If one tool cannot export the BIOS, try the other. mVolt+ does
+not bundle either tool and does not require a flash operation.
+
+Return to [Load, save and apply](#load-save-and-apply) to use your copy.
+
+A copy exported while an override is active may reflect the modified BIOS.
+Keep an earlier untouched copy if you want to preserve the starting version.
+
+### Already modified or different BIOS
+
+If mVolt+ still has its recovery data, loading the same BIOS or its recorded
+starting copy does not require the experimental checkbox. **Use current BIOS**
+leaves the file preview and returns to the current editor.
+An older copy that cannot be matched needs the experimental path, even if it
+originally came from your card.
+
+For an intentionally different image, enable **Allow different BIOS
+(experimental)**. Then choose **Save BIOS**, restart, and wait for verification.
+Only afterwards can mVolt+ show and edit that BIOS's supported limits. Fields
+marked **After restart** are expected during the preview.
+
+This option relaxes the original-BIOS match; it does not make another board's
+BIOS compatible or unlock every control. An incompatible BIOS can prevent the
+GPU from starting. Prefer a copy from your own card.
+
+### Restoring limits
+
+- **Use original limits** restores the recorded starting state.
+- **Revert changes**, when offered, restores the last confirmed working state.
+- Finish the requested GPU or Windows restart and wait for confirmation.
+
+The recorded starting state may already include earlier modifications; it is
+not necessarily factory stock. Dashboard **Reset all** does not remove the BIOS
+override.
+
+Keep `%PROGRAMDATA%\mVolt+\NativeLimits`. Deleting it does not remove an active
+override and can lose the saved starting state. If it is missing, reopen mVolt+
+and follow the recovery action offered in this dialog; **Revert changes** can
+remove an override that no longer has recovery data. If recovery still fails,
+keep the remaining files and [report the issue](https://github.com/b00nz/mVolt/issues).
+
+<details>
+<summary><strong>Recovery when the NVIDIA driver cannot start</strong></summary>
+
+If the saved recovery data is intact, open an administrator PowerShell window
+in the mVolt+ folder. Replace `RECORD_ID` with the 64-character folder name for
+the affected GPU under `%PROGRAMDATA%\mVolt+\NativeLimits`:
+
+```powershell
+.\mVolt+.exe --recover-limits RECORD_ID | Out-Host
+```
+
+This restores the last confirmed working state without requiring the NVIDIA
+driver. Restart Windows when requested, then reopen mVolt+ to verify it.
+It does not necessarily restore factory settings, and cannot recreate deleted
+recovery data. If the record is unclear or recovery fails, report the issue.
+
+</details>
 
 ## Compatibility and multiple GPUs
 
@@ -1293,7 +1511,7 @@ They do not create a dashboard draft. Unspecified controls are left untouched.
 | `--xbar-offset` / `--sys-offset` / `--video-offset` | Domain clock offset in MHz |
 | `--core-vdemand` / `--xbar-vdemand` / `--sys-vdemand` / `--video-vdemand` | Domain voltage demand in mV |
 | `--power` | Board power limit in percent of default |
-| `--power-cap-watts` | Additional watt cap, from 1 W through the reported maximum; up to three decimal places |
+| `--power-cap-watts` | Watt budget, from 1 W through the available maximum; up to three decimal places |
 | `--return-to-percentage` | Releases the additional cap without changing the percentage setting; no argument |
 | `--boost` | Voltage Boost percentage |
 | `--msvdd-clock-ratio` | NVVDD/MSVDD clock propagation ratio |
@@ -1329,8 +1547,8 @@ from help. The V/F editor's point-lock buttons are GUI actions; they have no
 dedicated CLI options.
 
 `--power`, `--power-cap-watts` and `--return-to-percentage` are mutually
-exclusive. The watt-cap command leaves the existing percentage request in
-place; the lower request can limit power. Read-only commands cannot be combined
+exclusive. On supported GPUs, a watt target also aligns the board-power request.
+Other adapters retain the separate additional-cap behavior. Read-only commands cannot be combined
 with tuning options, and `--profile` cannot be combined with direct tuning.
 
 </details>
@@ -1377,19 +1595,21 @@ selected GPU:
 
 Normal profiles apply settings enabled in the profile. Full snapshots also
 restore saved values for disabled controls. Boost lock is not saved in either mode.
-A one-shot CLI profile can apply fixed fan duty or firmware auto, but refuses an active software fan
-curve because it needs mVolt+ to keep running. Use the GUI/tray and configured logon
-behavior for software curves. `--diagnostic` creates a local compatibility report.
+A one-shot CLI profile can apply fixed fan duty, firmware auto or supported GPU
+fan policies. It refuses an active software fan curve because that needs mVolt+
+to keep running. Use the GUI/tray and configured logon behavior for software
+curves. `--diagnostic` creates a local compatibility report.
 
 ## Files and logging
 
 | Data | Where it lives / how it grows |
 | --- | --- |
-| Profiles and UI preferences | `%LOCALAPPDATA%\mVolt+\profiles\<VBIOS>-<adapter>.json`; up to 64 profiles per file |
+| Profiles and per-GPU preferences | `%LOCALAPPDATA%\mVolt+\profiles\<VBIOS>-<adapter>.json`; up to 64 profiles per file |
 | Profile backup | A `.bak` copy beside the profile file |
 | Backup before the first watt-cap profile save | `.before-power-cap.json` beside the profile file; kept for returning to an older version |
 | Backup before the first thermal-input profile save | `.before-thermal-inputs.json` beside the profile file; kept for returning to an older version |
 | Watt-cap ownership and recovery | Per-adapter `power-cap-<id>.txt` under `%LOCALAPPDATA%\mVolt+`; separate from profiles |
+| BIOS-override recovery | `%PROGRAMDATA%\mVolt+\NativeLimits`; keep this while using Extend limits |
 | Startup/profile logs | Size-limited logs under `%LOCALAPPDATA%\mVolt+` |
 | Clock and boost-reason histories | Recent readings kept while the app runs; cleared on exit |
 | Installed startup executable | Per-user/per-adapter directory under `%ProgramFiles%\mVolt+` |
@@ -1406,10 +1626,11 @@ the separate startup copy described above, which runs with administrator privile
 <details>
 <summary><strong>The percentage power slider is disabled</strong></summary>
 
-A selected or active watt cap takes over percentage editing. The previous
-percentage setting still applies. Choose **Reset** on **Power cap (watts)** to
+A selected or active watt cap takes over percentage editing.
+Choose **Reset** on **Power cap (watts)** to
 release the cap and use the percentage slider again. A cap set outside mVolt+
 can have the same effect; Reset explicitly replaces that request too.
+In Minimal, right-click the row and choose **Reset power cap**.
 
 See [Power cap in watts](#power-cap-in-watts).
 
@@ -1419,8 +1640,9 @@ See [Power cap in watts](#power-cap-in-watts).
 <summary><strong>Live watts are below the applied watt cap</strong></summary>
 
 The cap limits consumption; it does not force the GPU to draw that much power.
-A lower percentage setting, workload, temperature or another GPU limit can hold
-consumption below it. Compare the two power settings before raising either one.
+Workload, temperature or another GPU limit can hold consumption below it.
+Compare Requested and Enforced limits with measured board power in Telemetry.
+On adapters using an additional cap only, a lower percentage request can also bind.
 
 </details>
 
@@ -1458,7 +1680,7 @@ See [How the dashboard works](#how-the-dashboard-works).
 <details>
 <summary><strong>REL and ALT/OP changed, but measured voltage did not</strong></summary>
 
-Check **Current effective maximum**. Another limit may still constrain it; even
+Check the readback maximum under **Applied**, or the detailed hover help. Another limit may still constrain it; even
 if MAX rises, the workload may not need more voltage.
 See [Voltage limits and measured voltage](#voltage-limits-and-measured-voltage).
 
@@ -1491,7 +1713,7 @@ Compare Overview with the profile preview. See [Profiles](#profiles).
 </details>
 
 <details>
-<summary><strong>Fans stop following temperature after Exit</strong></summary>
+<summary><strong>The mVolt fan curve stops following temperature after Exit</strong></summary>
 
 Keep mVolt+ in the tray for the curve to track temperature. Fully exiting leaves
 the last duty fixed; **Reset to auto** returns control to firmware.

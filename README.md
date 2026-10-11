@@ -17,16 +17,21 @@ experimental; available controls depend on the GPU, VBIOS and driver.
 Run the executable; no installer is needed. Tuning requires administrator
 privileges. Read-only commands and the `--read-only` dashboard do not.
 
-This README and the guide cover **mVolt+ v0.47.3**. Check the release page for
+This README and the guide cover **mVolt+ v0.50.1**. Check the release page for
 the currently downloadable version.
 
-## v0.47.3 highlights
+## v0.50.1 highlights
 
-- **Telemetry:** clearer readings, cleaner layouts and consistent refresh timing.
-- **RTSS:** improved voltage readings in the familiar overlay menu.
-- **Profiles:** clearer previews and smoother profile switching.
-- **Startup:** restored apply-and-exit and improved startup reliability.
-- **Fixes:** V/F editor stability, tray tooltip and profile application in XOC mode.
+- **Extend limits using BIOS override:** change memory, power and board current ceilings on supported hardware. [Guide](docs/guide.md#extend-limits-using-bios-override).
+- **Board input current:** a separate control in amperes, with profile and Overview support.
+- **Minimal / Compact:** a smaller dashboard with separate expandable fan and thermal input rows.
+- **Fan control:** a unified mVolt / GPU editor, direct curve fields, experimental GPU policies and profile support.
+- **Thermal limit:** a separate temperature-limit control in °C, with profile support and Reset.
+- **Telemetry:** GPU info with silicon binning readings and firmware-reported Vrel, more temperature readings and expanded RTSS options.
+- **Shortcuts:** a global Toggle Boost Lock shortcut under Settings → Hotkeys.
+- **Fixes:** more reliable power controls, smoother window handling and improved profile and limits recovery.
+
+[Full release notes](docs/releases/v0.50.1.md) · [Get a BIOS copy](docs/guide.md#bios-copy)
 
 [Preset table](docs/guide.md#first-start-and-tile-presets) ·
 [V/F curves](docs/guide.md#vf-curve-editor) ·
@@ -44,16 +49,19 @@ the currently downloadable version.
   editing, wheel zoom, right-drag pan, keyboard selection, Flatten and Undo/Redo.
   Each curve has its own Enabled switch and optional reference line. Core also
   offers a live operating-point marker and immediate voltage-point or maximum-clock locks.
-- **Power and cooling:** percentage power limit and an additional watt cap,
-  Voltage Boost, NVVDD/MSVDD OCP, shared or individual fan-channel duty within
-  the driver's reported limits, and temperature-based fan curves.
+- **Power and cooling:** percentage or watt-based power control, board input
+  current, Voltage Boost, NVVDD/MSVDD OCP, thermal limit, fixed fan duty and
+  software or supported GPU fan-policy editing.
+- **Extended limits:** load a BIOS copy and change supported ceilings. The
+  override persists in this Windows installation; it does **NOT** flash the card.
 - **Monitoring:** rail and ADC readings, clock graphs, power, P-states,
-  temperatures, boost-limit reasons, memory timings, memory pressure and PCIe traffic.
+  temperatures, boost-limit reasons, memory timings, memory pressure, PCIe traffic
+  and GPU information.
 - **Thermal inputs:** fixed temperatures for the GPU's voltage/frequency
   calculations, plus channel 2 for memory temperature. Default restores the
   GPU-provided input.
-- **Dashboard:** collapsible sections, optional Quick tuning pins, tile
-  visibility, themes, interface sizing and explanatory tooltips.
+- **Dashboard:** Standard and Minimal / Compact layouts, collapsible sections,
+  Quick tuning pins, tile visibility, themes, interface sizing and hover help.
 - **Multiple GPUs:** adapter selection with separate profiles and preferences
   for each GPU and VBIOS.
 
@@ -86,12 +94,12 @@ Existing profiles keep their saved settings until overwritten.
 header menu or using its global shortcut applies it immediately.
 Profiles can also be selected for application at Windows logon.
 Editing an existing profile's shortcut saves it immediately without changing
-its tuning values or requiring Overwrite selected.
+its tuning values or requiring a profile update.
 
-Applying a normal watt-cap profile leaves the existing percentage limit in place;
-the lower limit governs. Applying a percentage profile releases a cap owned by
-mVolt+ before setting the percentage. Full snapshots save both the applied
-percentage limit and watt cap. See [power controls in profiles](docs/guide.md#power-controls-in-profiles).
+On supported GPUs, applying a watt target also aligns the board-power request
+with it. Applying a percentage profile releases a cap owned by mVolt+ first.
+Full snapshots retain the exact applied power requests.
+See [power controls in profiles](docs/guide.md#power-controls-in-profiles).
 
 Boost lock and the V/F editor's point/clock locks are immediate actions, outside
 both profile modes. Core, XBAR, SYS and Video curves are saved separately.
@@ -103,13 +111,16 @@ In **Settings → General**, enable **Start with Windows** and choose whether to
 **Start minimized to tray**. A selected startup profile applies either way;
 enable **Apply startup profile, then exit** to close after applying it.
 Software fan curves require mVolt+ to stay running.
+Supported GPU fan policies can also be saved in profiles and used with Apply, then exit.
+Set the separate Boost Lock shortcut in **Settings → Hotkeys**; it works while
+mVolt+ is running, including in the tray.
 
 [Profile guide](docs/guide.md#profiles) · [Startup and tray](docs/guide.md#startup-and-tray)
 
 ## Tuning Overview
 
 Overview provides a compact view of your applied tuning settings, including
-separate curve summaries, thermal inputs and enforced/requested power limits,
+separate curve summaries, thermal inputs, board input current and enforced/requested power limits,
 alongside the profile name and GPU BIOS. Power limits are separate from measured
 power consumption.
 **Copy summary** copies the current applied settings; **Always on top** keeps
@@ -118,13 +129,16 @@ the window visible beside another application.
 ## Telemetry and RTSS
 
 Telemetry groups readings into Rails, Clocks, Power, P-states, Temperatures,
-Boost limits and Memory / PCIe, opening on Rails by default. Memory / PCIe
+Boost limits, Memory / PCIe and GPU info, opening on Rails by default. Memory / PCIe
 includes read-only memory timings on supported GB202 hardware.
 Clock graphs show values on hover. Hotspot, firmware clock history and detailed
-limit reasons appear where supported.
+limit reasons appear where supported. GPU info shows read-only binning values
+and each rail's firmware-reported Vrel and offset.
 
 RivaTuner Statistics Server is optional and only needed for its on-screen
-overlay. Choose the readings in **Settings → Monitoring**.
+overlay. Choose the readings in **Settings → Monitoring**, including the applied
+profile, Boost Lock, clocks, temperatures, fan duty/RPM, power versus limit,
+GPU load and VRAM usage.
 
 [Telemetry reference](docs/guide.md#telemetry)
 
@@ -155,6 +169,10 @@ can clear them. **Software fan curves need mVolt+ running to follow temperature*
 the tray is sufficient. Fully exiting leaves the last fan duty fixed.
 Resetting fans to auto returns control to the GPU firmware.
 
+**BIOS overrides are different:** they remain active across reboots until
+reverted. Saving limits does not apply dashboard tuning targets. Follow the
+[limits guide](docs/guide.md#extend-limits-using-bios-override), and keep the saved recovery data.
+
 GPU tuning can cause instability or hardware damage. A setting accepted by the
 driver is not proof of stability; a reported device limit is not a safe-voltage
 rating.
@@ -177,25 +195,55 @@ applies immediately. The guide covers all options, units and automation examples
 
 ## Screenshots
 
-Screenshots of v0.47.2 on an RTX 5090. The profiles and tuning values shown are
-examples, not recommended settings.
+All screenshots show v0.50.1. The tuning values shown are examples, not recommended settings.
 
-### Dashboard
+### Minimal / Compact — v0.50.1
 
-An example Quick tuning layout with the Min/Max voltage sliders.
+![mVolt+ Minimal dashboard](assets/mvolt-minimal.png)
+
+### Tuning Overview — v0.50.1
+
+![Tuning Overview](assets/mvolt-overview.png)
+
+<details>
+<summary><strong>Standard dashboard and Profile Manager</strong></summary>
 
 ![mVolt+ dashboard](assets/mvolt-dashboard.png)
 
-<details>
-<summary><strong>Telemetry, V/F editor, Profiles and Overview</strong></summary>
+![Profile Manager](assets/mvolt-profiles.png)
 
-![Telemetry](assets/mvolt-telemetry.png)
+</details>
+
+<details>
+<summary><strong>Fan controllers</strong></summary>
+
+**mVolt software curve**
+
+![mVolt fan curve editor](assets/mvolt-fan-curve.png)
+
+**GPU fan policy — experimental**
+
+![GPU fan policy editor](assets/mvolt-gpu-fan-curve.png)
+
+</details>
+
+<details>
+<summary><strong>V/F editor and extended limits</strong></summary>
 
 ![V/F Curve Editor](assets/mvolt-vf-curve-editor.png)
 
-![Profile Manager](assets/mvolt-profiles.png)
+![Extend limits using BIOS override](assets/mvolt-extended-limits.png)
 
-![Tuning Overview](assets/mvolt-overview.png)
+</details>
+
+<details>
+<summary><strong>Telemetry, temperatures and GPU info</strong></summary>
+
+![Telemetry](assets/mvolt-telemetry.png)
+
+![Temperature readings](assets/mvolt-temperatures.png)
+
+![GPU info and firmware-reported Vrel](assets/mvolt-gpu-info.png)
 
 </details>
 
