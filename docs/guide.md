@@ -1,9 +1,10 @@
 # mVolt+ user guide
 
-**For mVolt+ v0.50.1** · [Back to the project](../README.md) · [Releases](https://github.com/b00nz/mVolt/releases/latest)
+**For mVolt+ v0.50.2** · [Back to the project](../README.md) · [Releases](https://github.com/b00nz/mVolt/releases/latest)
 
 This guide covers tuning, profiles, monitoring and startup. Expand a section
-for details. Screenshots show v0.50.1. Shown values are examples, not recommendations.
+for details. Screenshots show v0.50.1 unless noted; Extend limits shows v0.50.2.
+Shown values are examples, not recommendations.
 
 ## Find your way
 
@@ -13,7 +14,7 @@ for details. Screenshots show v0.50.1. Shown values are examples, not recommenda
 | [First start and tile presets](#first-start-and-tile-presets) | Three starting layouts and the complete tile table |
 | [Dashboard control reference](#dashboard-control-reference) | Every tile, grouped as it appears in the app |
 | [Power cap in watts](#power-cap-in-watts) | Watt targets, percentage limits and Reset |
-| [Extend limits using BIOS override](#extend-limits-using-bios-override) | Load a BIOS copy, change ceilings and restore limits |
+| [Extend limits](#extend-limits) | Direct or BIOS-file limits, activation and recovery |
 | [BIOS copy](#bios-copy) | Save a copy with GPU-Z or NVFlash |
 | [Thermal inputs](#thermal-inputs) | Fixed inputs to VFE, Default, Reset and profiles |
 | [Voltage limits and measured voltage](#voltage-limits-and-measured-voltage) | VMIN, REL, ALT/OP, OV, linked editing and MAX |
@@ -24,7 +25,7 @@ for details. Screenshots show v0.50.1. Shown values are examples, not recommenda
 | [Telemetry](#telemetry) | Sensors, graphs, boost reasons, memory timings and PCIe |
 | [Overview](#overview) | A compact view of current settings |
 | [Settings and layout](#settings-and-layout) | Polling, RTSS, themes, sizing and tile visibility |
-| [Advanced tuning](#advanced-tuning) | Extended demands, OCP unlock and XOC |
+| [Advanced tuning](#advanced-tuning) | Extended demands, OCP unlock, XOC and shunt correction |
 | [Compatibility and multiple GPUs](#compatibility-and-multiple-gpus) | Selecting hardware and understanding unavailable controls |
 | [Command line and automation](#command-line-and-automation) | Read-only commands and immediate tuning requests |
 | [Files and logging](#files-and-logging) | Profiles, backups and storage footprint |
@@ -351,7 +352,7 @@ tools are not always directly comparable. Reset clears the memory offset.
 Targets are checked against the driver's current offset range. Profiles and
 the CLI use the same range checks as dashboard Apply.
 To change the available ceiling where supported, use
-[Extend limits using BIOS override](#extend-limits-using-bios-override).
+[Extend limits](#extend-limits).
 
 </details>
 
@@ -945,7 +946,7 @@ the snapshot accepts the cap at the driver's maximum and leaves it there.
 Board input current, GPU fan policies and Thermal limit follow the same profile
 participation rules where supported. Older app versions may not read profiles
 saved with newer controls; keep the automatic migration backups when downgrading.
-BIOS-override ceilings are managed separately and are not installed by applying
+Extended limits are managed separately and are not installed by applying
 a tuning profile.
 
 ### Save, preview and apply
@@ -963,8 +964,9 @@ a tuning profile.
 | Restore backup | Restores the backup profile file without applying its settings |
 | Delete | Removes the selected profile after confirmation; applied settings stay in place |
 
-The header profile menu applies immediately. Long menus scroll, with **Manage
-profiles** at the top when scrolling is needed. After an apply, mVolt+ can recognize
+Selecting a profile in the header menu applies it immediately. The mouse wheel
+navigates long menus without applying a profile; **Manage profiles** remains at
+the top. After an apply, mVolt+ can recognize
 the profile on the next launch if the GPU settings still match, without applying it
 again. **Custom** means no saved profile is currently identified as active.
 
@@ -1186,11 +1188,12 @@ Examine errors and traffic together under comparable conditions.
 </details>
 
 <details>
-<summary><strong>GPU info</strong> — identity, silicon binning and Vrel</summary>
+<summary><strong>GPU info</strong> — ASIC information, ECID and Vrel</summary>
 
-Shows read-only Speedo, NVVDD/MSVDD Iddq and OC-bin readings where available.
-These are reported binning values, not an overclocking score or a promise of
-stable clocks.
+**ASIC information** shows Speedo, NVVDD/MSVDD Iddq and OC-bin readings where
+available. **Speedo position** places the value within the driver's reported
+range; it does not rank the card against other GPUs or predict stable clocks.
+The **ECID** identifies the chip; right-click to copy it where available.
 
 Each rail's **Firmware-reported Vrel** is shown beside its **Reported Vrel
 offset**. The offset is already accounted for in the reported limit; do not add
@@ -1266,8 +1269,15 @@ measured readings; firmware-requested voltage is not substituted in the overlay.
 
 Choose from GPU/driver identity, the applied profile, Boost Lock, rail voltages,
 core/memory/fabric clocks, GPU/hotspot/memory temperatures, fan duty/RPM, power
-versus enforced limit, GPU load and VRAM used/total. Missing or stale readings
-are omitted. VRAM usage is for the whole GPU, not just the current game.
+versus enforced limit, GPU load and VRAM used/total. Use the group buttons to
+find each option; the **Overlay preview** shows the selected lines. Missing or
+stale GPU readings are omitted. VRAM usage is for the whole GPU, not just the current game.
+
+The **Frame rate** group adds FPS, frame time, average FPS, 1% low and 0.1% low.
+RTSS supplies these values in the target application. Start RTSS benchmark
+recording for average and low statistics. The preview shows `--` for frame
+statistics; their values appear in the overlay. These options do not add an FPS
+history to the Telemetry window.
 
 ### Hotkeys
 
@@ -1296,6 +1306,8 @@ Your scroll position is kept unless collapsing the section leaves less content
 to scroll. **Sections → Show/Hide tiles** opens a grouped submenu with checkmarks.
 Changing visible tiles keeps your chosen window size, including a narrow
 single-column layout. Sections also offers pinning and collapse controls.
+NVVDD and MSVDD overvoltage rows have separate visibility entries beside their
+parent voltage controls. Hiding a parent card also hides its overvoltage row.
 Pinning moves a card to Quick tuning; hiding removes
 it from view. **Hiding, collapsing and pinning do not change whether a setting
 is applied or stored in a profile.** Apply still includes hidden enabled cards.
@@ -1304,7 +1316,7 @@ pin one. Existing saved pins are preserved.
 
 ## Advanced tuning
 
-These options change the ranges mVolt+ permits you to edit. They do not establish
+The three range options change the values mVolt+ permits you to edit. They do not establish
 that higher values are appropriate for your hardware.
 
 All three start off in a new configuration. Saved choices are restored. mVolt+
@@ -1328,35 +1340,52 @@ are editing limits, not measured voltages or safe operating-voltage ratings.
 Both modes edit offsets; the resulting voltage limits can change with operating
 conditions.
 
-## Extend limits using BIOS override
+### Shunt multiplier
 
-Open **Settings → Advanced tuning → Extend limits using BIOS override** to change
-supported ceilings for **Memory offset**, **Power limit** and **Board input current**.
+For a shunt-modded card, enable **Shunt multiplier** and enter a factor from
+**1.00 to 10.00**. It corrects supported board/input power and current readings,
+displayed power limits, session energy and corresponding RTSS displays.
+Corrected Telemetry values show the multiplier beside them.
 
-![Extend limits using BIOS override](../assets/mvolt-extended-limits.png)
+This is a display preference for the selected GPU. Tuning inputs, saved tuning values,
+voltages, CLI output and diagnostic reports keep their original values. Turning
+it off restores the uncorrected display.
 
-**This does NOT flash the card's BIOS.** The override is saved in this Windows
-installation and stays active across reboots until reverted. It does not turn
-the displayed limits into recommended settings or guarantee stability.
+<a name="extend-limits-using-bios-override"></a>
+
+## Extend limits
+
+Open **Settings → Advanced tuning → Extend limits** to change supported ceilings
+for **Memory offset**, **Power limit**, **Board input current**, **NVVDD** and **MSVDD**.
+
+![Extend limits — v0.50.2](../assets/mvolt-extended-limits.png)
+
+Choose **Direct** to edit limits without a BIOS file, or **BIOS file** to use a
+BIOS copy. Direct is the default. Available methods depend on the driver; hover
+over an unavailable method for the reason. Existing saved limits remain manageable.
+
+**Neither method flashes the card's BIOS.** Limits are saved in this Windows
+installation and remain active across reboots until reverted. The displayed
+maxima are not recommended settings or a guarantee of stability.
 
 ### Load, save and apply
 
-1. Obtain a [BIOS copy](#bios-copy), preferably from your own card. If the current
-   BIOS is already available and the editor works, another import is unnecessary.
-2. Choose **Load BIOS file…** and select the copy. Loading only previews it.
-3. For a matching copy, enter the supported **New maximum** values and choose
-   **Save limits**.
-4. Choose **Restart GPU** or **Restart Windows**. Save work first; the display
+1. Select the intended GPU, open Extend limits and choose a method. **Direct**
+   needs no file. For **BIOS file**, use **Load BIOS file…** if a copy is needed;
+   loading only previews it. See [BIOS copy](#bios-copy).
+2. Change the supported **New maximum** values you want to adjust, then choose
+   **Save limits**. Unedited rows keep their settings.
+3. Choose the offered **Restart GPU** or **Restart Windows** action. Save work first; the display
    may briefly go blank during a GPU restart. **Later** leaves the changes pending.
-5. Wait for the confirmation that the BIOS and limits are active and verified.
-6. Return to the dashboard, enter your tuning targets and choose **Apply changes**.
+4. Wait for confirmation that the limits are active.
+5. Return to the dashboard, enter your tuning targets and choose **Apply changes**.
 
 **Saving a ceiling does not apply a memory offset, watt target or current target.**
 The last step is still required.
 
 | Column | Meaning |
 | --- | --- |
-| **Active maximum** | The ceiling currently read back from the driver |
+| **Active maximum** | The ceiling currently in effect |
 | **Theoretical max.** | Guidance only; not a guaranteed working or safe limit |
 | **New maximum** | The ceiling you want to save; it is not active yet |
 
@@ -1364,9 +1393,17 @@ An unavailable row does not prevent another supported row from being used.
 Theoretical values are guidance, not a separate input cap. A higher entry may
 be accepted without producing a higher usable limit.
 
+The NVVDD and MSVDD rows set the BIOS-declared voltage ceilings. Their effect
+still depends on the card's voltage regulation; raising one may have no effect
+on the voltage limit the card can reach.
+
+To switch the method of saved limits, choose the other method and follow the
+restart steps. Once the original limits are confirmed, previous entries return
+as drafts where supported. Review them and choose **Save limits** to use the new method.
+
 ### BIOS copy
 
-Keep an untouched copy from your card before changing its limits. Use either tool:
+For the BIOS-file method, use an untouched copy from your card. Save one with either tool:
 
 - **[GPU-Z](https://www.techpowerup.com/gpuz/):** select the correct GPU, click the
   save icon beside **BIOS Version**, choose **Save to file…**, and save the `.rom`.
@@ -1388,7 +1425,8 @@ Keep an earlier untouched copy if you want to preserve the starting version.
 
 ### Already modified or different BIOS
 
-If mVolt+ still has its recovery data, loading the same BIOS or its recorded
+These options belong to the **BIOS file** method. If mVolt+ still has its recovery
+data, loading the same BIOS or its recorded
 starting copy does not require the experimental checkbox. **Use current BIOS**
 leaves the file preview and returns to the current editor.
 An older copy that cannot be matched needs the experimental path, even if it
@@ -1405,13 +1443,15 @@ GPU from starting. Prefer a copy from your own card.
 
 ### Restoring limits
 
-- **Use original limits** restores the recorded starting state.
+- **Use original limits / Remove BIOS override** restores the recorded starting
+  state or removes the saved override, as described in its hover help.
 - **Revert changes**, when offered, restores the last confirmed working state.
 - Finish the requested GPU or Windows restart and wait for confirmation.
 
 The recorded starting state may already include earlier modifications; it is
-not necessarily factory stock. Dashboard **Reset all** does not remove the BIOS
-override.
+not necessarily factory stock. Dashboard **Reset all** does not remove saved
+extended limits. Explicit override removal requires a full Windows restart;
+use **Restart Windows** or **Later** when those are the offered actions.
 
 Keep `%PROGRAMDATA%\mVolt+\NativeLimits`. Deleting it does not remove an active
 override and can lose the saved starting state. If it is missing, reopen mVolt+
@@ -1422,6 +1462,11 @@ keep the remaining files and [report the issue](https://github.com/b00nz/mVolt/i
 <details>
 <summary><strong>Recovery when the NVIDIA driver cannot start</strong></summary>
 
+If mVolt+ offers startup recovery, choose **Remove BIOS override** to remove the
+stored override for the affected GPU. After removal, choose **Restart Windows**
+or **Later**. Restart Windows before checking the GPU again. Removal does not
+restart Windows automatically.
+
 If the saved recovery data is intact, open an administrator PowerShell window
 in the mVolt+ folder. Replace `RECORD_ID` with the 64-character folder name for
 the affected GPU under `%PROGRAMDATA%\mVolt+\NativeLimits`:
@@ -1430,8 +1475,9 @@ the affected GPU under `%PROGRAMDATA%\mVolt+\NativeLimits`:
 .\mVolt+.exe --recover-limits RECORD_ID | Out-Host
 ```
 
-This restores the last confirmed working state without requiring the NVIDIA
-driver. Restart Windows when requested, then reopen mVolt+ to verify it.
+The command restores the last confirmed working state, or finishes an override
+removal already in progress, without requiring the NVIDIA driver. Restart
+Windows when requested, then reopen mVolt+ to verify it.
 It does not necessarily restore factory settings, and cannot recreate deleted
 recovery data. If the record is unclear or recovery fails, report the issue.
 
@@ -1485,6 +1531,7 @@ includes these readings:
 
 | JSON field | Meaning |
 | --- | --- |
+| `active_profile` | Verified applied profile name, `"Custom"` for changed settings, or `null` when it cannot be verified |
 | `power_limits.requested_mw` | Requested board power limit in milliwatts |
 | `power_limits.enforced_mw` | Limit currently enforced by the driver, in milliwatts |
 | `power_limits.default_mw` | Driver-reported default board power limit |
@@ -1496,6 +1543,15 @@ storage, not a current temperature. A fixed zero-degree input instead has
 `overridden:true` and `input_c:0`. A clock request whose completion is unknown
 reports `clock_range_mhz.uncertain:true` and `locked:null` when the range interface
 is available. Existing status fields remain supported.
+
+`active_profile` checks the applied profile, including its V/F curves, so scripts
+can distinguish presets with identical clock and voltage offsets. Querying
+status does not apply a profile. For example:
+
+```powershell
+$status = .\mVolt+.exe --status | ConvertFrom-Json
+$status.active_profile
+```
 
 **Tuning options apply immediately and require administrator privileges.**
 They do not create a dashboard draft. Unspecified controls are left untouched.
