@@ -1,10 +1,9 @@
 # mVolt+ user guide
 
-**For mVolt+ v0.50.2** · [Back to the project](../README.md) · [Releases](https://github.com/b00nz/mVolt/releases/latest)
+**For mVolt+ v0.50.x** · [Back to the project](../README.md) · [Releases](https://github.com/b00nz/mVolt/releases/latest)
 
 This guide covers tuning, profiles, monitoring and startup. Expand a section
-for details. Screenshots show v0.50.1 unless noted; Extend limits shows v0.50.2.
-Shown values are examples, not recommendations.
+for details. Screenshots are from the v0.50.x series.
 
 ## Find your way
 
@@ -14,13 +13,13 @@ Shown values are examples, not recommendations.
 | [First start and tile presets](#first-start-and-tile-presets) | Three starting layouts and the complete tile table |
 | [Dashboard control reference](#dashboard-control-reference) | Every tile, grouped as it appears in the app |
 | [Power cap in watts](#power-cap-in-watts) | Watt targets, percentage limits and Reset |
-| [Extend limits](#extend-limits) | Direct or BIOS-file limits, activation and recovery |
+| [BIOS override](#bios-override) | Clock ranges, voltage/current limits, fan settings and recovery |
 | [BIOS copy](#bios-copy) | Save a copy with GPU-Z or NVFlash |
 | [Thermal inputs](#thermal-inputs) | Fixed inputs to VFE, Default, Reset and profiles |
 | [Voltage limits and measured voltage](#voltage-limits-and-measured-voltage) | VMIN, REL, ALT/OP, OV, linked editing and MAX |
 | [V/F Curve Editor](#vf-curve-editor) | Core and MSVDD curves, point edits, profiles and Core locks |
 | [Fan control and persistence](#fan-control-and-persistence) | Fixed duty, firmware auto, curves and hysteresis |
-| [Profiles](#profiles) | Saving, applying, full snapshots, comparisons and shortcuts |
+| [Profiles](#profiles) | Saving, applying, full snapshots, details and shortcuts |
 | [Startup and tray](#startup-and-tray) | Logon readiness, recovery and closing behavior |
 | [Telemetry](#telemetry) | Sensors, graphs, boost reasons, memory timings and PCIe |
 | [Overview](#overview) | A compact view of current settings |
@@ -34,8 +33,10 @@ Shown values are examples, not recommendations.
 ## How the dashboard works
 
 The header identifies the selected GPU, driver and VBIOS. Its live readings show
-core clock, voltage, power, GPU temperature and supported hotspot temperature.
-The profile selector shows the recognized saved profile or **Custom**.
+core and memory clocks, voltage, power, GPU temperature and supported hotspot temperature.
+GDDR6X/GDDR7 memory uses command-clock MHz; hover for the driver-reported frequency.
+Below the readings, the profile selector sits beside **Reset all** and **Settings**
+and shows the recognized saved profile or **Custom**.
 
 | Label or action | Meaning |
 | --- | --- |
@@ -59,6 +60,8 @@ Minimal uses shared actions and row context menus instead of per-card buttons.
 
 Slider, stepper and text edits are pending until Apply. A card-specific Apply
 acts on that card; **Apply fans** acts on the fan tile. Other edits remain pending.
+Pressing **Enter** in a numeric field applies that control. In the V/F and fan
+editors, Enter applies the current curve or policy.
 Reset is immediate and needs no second Apply.
 Changing a tile or V/F switch alone does not create a pending tuning change.
 Resetting one tile keeps its switches and leaves other unapplied edits alone.
@@ -66,10 +69,9 @@ On **Power cap (watts)**, Reset releases the additional cap while keeping the
 existing percentage setting; it does not set the percentage to 100%.
 
 **Boost lock**, applying a saved profile and Reset actions are immediate.
-Single-clicking a profile in the Profile Manager list previews it;
-**double-clicking applies it**. Selecting one from the **header menu also applies
-it**. Startup application and profile shortcuts
-also write settings when configured. Narrowing advanced ranges can write limits;
+Clicking a profile name in the **header menu applies it**; **Details** opens its
+saved parameters. Startup application and profile shortcuts also write settings
+when configured. Narrowing advanced ranges can write limits;
 see [Advanced tuning](#advanced-tuning).
 
 A successful Apply means the driver accepted the settings and mVolt+ checked
@@ -352,7 +354,7 @@ tools are not always directly comparable. Reset clears the memory offset.
 Targets are checked against the driver's current offset range. Profiles and
 the CLI use the same range checks as dashboard Apply.
 To change the available ceiling where supported, use
-[Extend limits](#extend-limits).
+[BIOS override](#bios-override).
 
 </details>
 
@@ -524,7 +526,7 @@ an applied fixed input.
 
 **Power cap (watts)** sets a board-power budget. It can cap power below the
 percentage slider's minimum and uses the currently available maximum, including
-verified [extended limits](#extend-limits-using-bios-override).
+verified [BIOS overrides](#bios-override).
 
 Enable the tile, enter a watt target, then choose **Apply changes**. New targets
 start at **1 W**, accept up to three decimal places, and must fit the current
@@ -695,6 +697,7 @@ does not change the GPU. Opening or switching curves never enables them.
 | Left-drag empty graph space at any zoom, or Shift+left-drag from a point | Selects a region; dragging a selected point moves the selection |
 | Selected MHz → Set point | Sets the selected point's pending frequency |
 | Point offset → Set offset | Sets the selected points' pending frequency offsets |
+| Enter in a frequency or offset field | Applies the selected curve with the entered value |
 | Flatten above | Flattens the pending curve from the selected point through higher-voltage points, keeping the current graph scale |
 | Lock voltage point (Core only) | Immediately requests the selected point's voltage bin; click Release voltage point to release it |
 | Limit max clock (Core only) | Immediately caps core frequency at the selected point's displayed frequency, including pending edits; click Release clock limit to release it |
@@ -786,15 +789,18 @@ the graph or enter each point's **Temperature** and **Duty** directly.
 
 ![mVolt software fan curve](../assets/mvolt-fan-curve.png)
 
-In **GPU** mode, choose a policy and edit its three temperatures; speed values
-stay fixed. **Apply** activates it and stops the mVolt software curve.
+In **GPU** mode, choose a policy and edit **Temperature**, **PWM duty** and **RPM**
+for each of its three points. Temperatures must increase from point to point;
+PWM and RPM targets must stay level or increase. **Apply**, or Enter in a field,
+activates the policy and stops the mVolt software curve.
 **Restore original** restores the saved pre-edit policy, which is kept between
 launches and is not necessarily the card's factory setting.
 
 ![GPU fan policy editor](../assets/mvolt-gpu-fan-curve.png)
 
 GPU policies can be saved in profiles and used with **Apply startup profile,
-then exit**. Saving captures the applied policy, not pending temperature edits.
+then exit**. Saving captures the applied temperatures, PWM and RPM targets.
+Older temperature-only profiles keep the current speed targets when applied.
 
 GPU mode is experimental. Policy numbers are not physical fan labels, and
 firmware response and reset/reboot persistence depend on the hardware.
@@ -840,7 +846,7 @@ the Applied reading shows the current setting.
 
 ## Profiles
 
-Profiles save applied settings and enabled/disabled switches. Loading a profile
+Profiles save applied settings and enabled/disabled switches. Applying a profile
 restores its saved switches. Each GPU and BIOS has its own profiles.
 
 ### Normal profiles and full snapshots
@@ -851,14 +857,11 @@ restores its saved switches. Each GPU and BIOS has its own profiles.
 | Saved and disabled | Leaves the current GPU setting unchanged | Restores its saved value |
 | Missing or unavailable when saved | Leaves the current GPU setting unchanged | Leaves the current GPU setting unchanged |
 
-On the first new-profile save, mVolt+ asks whether to use **Only enabled settings**
-(normal mode) or **Full snapshot**. The choice is remembered for this GPU; it
-does not appear at startup or when applying an existing profile.
-
-Change the default in **Profile Manager → New profile mode**. The save form's
-**Full snapshot (include disabled settings)** checkbox overrides it for one save.
-Existing profiles keep their mode, including when overwritten. Enabled-only
-previews show only the settings the profile will apply.
+Leave the save form's **Full snapshot** checkbox unchecked for a normal profile,
+or check it to include disabled settings. It starts unchecked; a successful
+new-profile save remembers your choice for this GPU. Overwriting an existing
+profile keeps its saved mode. Normal previews show only the settings the
+profile will apply.
 
 **Saving or overwriting a profile saves applied settings in both modes.**
 Unapplied slider values, fan-mode changes, thermal inputs and V/F curve edits
@@ -907,9 +910,8 @@ Normal profiles can be saved even when excluded curves cannot be read.
 Included curves and full snapshots still need current GPU readings.
 
 A profile without a particular curve leaves it unchanged. For example, an older
-profile with no XBAR curve neither resets the current XBAR curve nor shows an
-XBAR difference in **Preview changes**. A curve disabled in the profile
-also stays unchanged in normal mode.
+profile with no XBAR curve leaves the current XBAR curve in place. A curve
+disabled in the profile also stays unchanged in normal mode.
 
 To save a reset curve in a full snapshot, select that curve, use **Reset V/F curve**,
 then save or overwrite the snapshot. Reset each curve you want to clear.
@@ -942,54 +944,63 @@ Full snapshots save the exact applied power requests and watt cap, even when
 their switches are off. Pending edits are left out. If a snapshot was saved
 without a watt cap but a lower cap is now active, use Reset first. After Reset,
 the snapshot accepts the cap at the driver's maximum and leaves it there.
+On laptops that have no ordinary board-power request, full snapshots preserve
+that unset state alongside the watt cap and board-current setting.
 
 Board input current, GPU fan policies and Thermal limit follow the same profile
 participation rules where supported. Older app versions may not read profiles
 saved with newer controls; keep the automatic migration backups when downgrading.
-Extended limits are managed separately and are not installed by applying
+BIOS overrides are managed separately and are not installed by applying
 a tuning profile.
+
+### Header profile menu
+
+Open the profile selector beside **Reset all** and **Settings**. Each row shows
+the profile name, save mode and an indicator for the active profile.
+
+| Action | What it does |
+| --- | --- |
+| Click the profile name | Applies the saved profile immediately |
+| Details (gear) | Opens the saved parameters, name and shortcut |
+| Overwrite (disk) | Saves current applied settings into that profile, keeping its save mode |
+| Delete (trash) | Removes the profile after confirmation |
+| Save current as… | Opens a new-profile form with a preview and save-mode choice |
+
+Use the mouse wheel or keyboard to navigate a long menu. In **Details**, edit
+the name and press Enter to save it, or capture a new shortcut. Profile changes
+save in the background, with feedback in the dashboard status bar.
+
+![Profile selector](../assets/mvolt-profile-menu.png)
+
+![Profile details](../assets/mvolt-profile-details.png)
 
 ### Save, preview and apply
 
-| Profile Manager action | What it does |
-| --- | --- |
-| Single-click a profile in the list | Shows its saved values without applying |
-| Double-click a profile in the list | Immediately applies that profile |
-| Save current settings ▾ → Save as new profile… | Opens a new profile form with a preview of applied settings |
-| Save profile | Saves applied settings in the chosen mode; pending edits stay in the editor |
-| Save current settings ▾ → Update “name” | Updates that profile with applied settings, keeping its existing mode |
-| Preview changes… | Compares the settings the profile would apply with current GPU values |
-| Apply profile | Immediately applies the saved configuration |
-| Load for editing | Loads its values and switches for editing without applying them |
-| Restore backup | Restores the backup profile file without applying its settings |
-| Delete | Removes the selected profile after confirmation; applied settings stay in place |
+Choose **Save current as…**, enter a name, choose the save mode,
+review the parameter preview and click **Save**. Open **Details** to inspect
+saved parameters or set the new profile's shortcut.
 
-Selecting a profile in the header menu applies it immediately. The mouse wheel
-navigates long menus without applying a profile; **Manage profiles** remains at
-the top. After an apply, mVolt+ can recognize
-the profile on the next launch if the GPU settings still match, without applying it
-again. **Custom** means no saved profile is currently identified as active.
+To update a profile, apply it, make and apply your dashboard changes, then use
+that profile's **Overwrite** icon. Saving and overwriting run in the background
+and capture applied settings; pending edits stay in the editor.
+
+After an apply, mVolt+ can recognize the profile on the next launch if the GPU
+settings still match, without applying it again. **Custom** means no saved
+profile is currently identified as active.
 
 Both modes save applied curve and fan settings, leaving out pending changes.
 A running fan curve's changing duty is a live reading, not a pending edit.
-Loading a normal profile with fan control disabled leaves a running fan curve alone.
-
-Profile Manager keeps the save actions together under **Save current settings ▾**.
-Both save paths capture applied settings in the background; pending edits stay
-in the editor. Longer previews scroll.
-
-![Profile Manager](../assets/mvolt-profiles.png)
+Applying a normal profile with fan control disabled leaves a running fan curve alone.
 
 ### Global profile shortcuts
 
-Click **Global profile shortcut** and press a modified key combination, such as
-**Ctrl+F5**. Shift alone and combinations reserved for normal typing are not accepted.
-For an existing profile, the binding saves immediately without overwriting
-its tuning values. A new profile saves its shortcut with the rest of the form.
+In **Details**, click **Apply shortcut** and press a modified key combination,
+such as **Ctrl+F5**. Shift alone and combinations reserved for normal typing are
+not accepted. The binding saves immediately without overwriting tuning values.
 Backspace or Delete clears the shortcut. Shortcuts are suspended while this field
 has focus; a conflict or failed save retains the previous binding.
-Shortcuts work while mVolt+ runs, including in the tray, and apply the same saved
-configuration as **Apply profile**. Shortcut conflicts are shown beside the field.
+Shortcuts work while mVolt+ runs, including in the tray, and apply the saved
+profile immediately. Shortcut conflicts are shown beside the field.
 
 ## Startup and tray
 
@@ -999,8 +1010,8 @@ or as a visible window. Enable **Apply startup profile, then exit** to close
 after successfully applying your selected startup profile. This option refuses
 profiles with a software fan curve, which requires mVolt+ to stay running.
 
-Select a startup profile in Profile Manager to apply it automatically. Without
-one, the app starts without applying tuning. A successfully applied profile is
+If a startup profile is already configured, mVolt+ applies it automatically.
+Without one, the app starts without applying tuning. A successfully applied profile is
 shown by name; the header menu marks it with a green dot and the tray menu with
 a checkmark. Custom settings leave the saved-profile entries unmarked.
 
@@ -1028,7 +1039,7 @@ privileges, configured for your Windows user and GPU. Opening mVolt+ as administ
 updates existing startup copies for this edition, including those for disconnected GPUs.
 
 An interrupted automatic Apply stops further automatic attempts. Once the GPU
-is available, use **Apply changes** or **Apply profile** manually. A successful
+is available, use **Apply changes** or select a profile from the header menu. A successful
 Apply clears the block; you do not need to change your startup options.
 An interrupted manual Apply does not block your startup profile, but its settings
 will not be reapplied after sleep.
@@ -1240,7 +1251,7 @@ moved or fitted to the available display. Maximized state is saved separately.
 
 **Debug report…** and **Project / help** are in General. Tray preferences are
 explained in [Startup and tray](#startup-and-tray). Tile visibility lives in
-**Sections → Show/Hide tiles**; new-profile mode is in **Profile Manager**.
+**Sections → Show/Hide tiles**. Choose the profile save mode in the save form.
 Debug report creates a local diagnostic report; it is not sent automatically.
 Project / help opens the project's page.
 
@@ -1255,7 +1266,7 @@ the dashboard's **Reset all** to reset GPU tuning instead.
 ### Monitoring and RTSS
 
 **Refresh interval** sets how often monitoring and RTSS update: **250–60,000 ms**,
-with **1,000 ms** as the default. Enter it and click **Set interval**. Longer
+with **1,000 ms** as the default. Enter it and press **Enter** or click **Set interval**. Longer
 intervals reduce updates and also slow software fan-curve responses.
 
 **Pause when minimized or in tray** pauses general monitoring unless a visible
@@ -1281,10 +1292,11 @@ history to the Telemetry window.
 
 ### Hotkeys
 
-Click **Toggle Boost Lock** and press a combination such as **Ctrl+F6**.
-The binding saves immediately for this GPU; Backspace or Delete clears it.
-It works while mVolt+ runs, including in the tray, and acts immediately.
-Profile shortcuts remain in [Profile Manager](#global-profile-shortcuts).
+Choose **Toggle Boost Lock** or **Toggle RTSS overlay** and press a combination
+such as **Ctrl+F6**. The binding saves immediately for this GPU; Backspace or
+Delete clears it. Both work while mVolt+ runs, including in the tray.
+Toggling RTSS changes overlay visibility and keeps the selected readings.
+Profile shortcuts are set in [Details](#global-profile-shortcuts).
 Duplicate bindings and combinations that interfere with ordinary typing are refused.
 
 ### Appearance and dashboard organization
@@ -1345,6 +1357,7 @@ conditions.
 For a shunt-modded card, enable **Shunt multiplier** and enter a factor from
 **1.00 to 10.00**. It corrects supported board/input power and current readings,
 displayed power limits, session energy and corresponding RTSS displays.
+This includes the board-power **Request** and **Runtime** limits in Telemetry.
 Corrected Telemetry values show the multiplier beside them.
 
 This is a display preference for the selected GPU. Tuning inputs, saved tuning values,
@@ -1352,50 +1365,65 @@ voltages, CLI output and diagnostic reports keep their original values. Turning
 it off restores the uncorrected display.
 
 <a name="extend-limits-using-bios-override"></a>
+<a name="extend-limits"></a>
 
-## Extend limits
+## BIOS override
 
-Open **Settings → Advanced tuning → Extend limits** to change supported ceilings
-for **Memory offset**, **Power limit**, **Board input current**, **NVVDD** and **MSVDD**.
+Open **Settings → Advanced tuning → BIOS override**. The window groups controls
+into three sections:
 
-![Extend limits — v0.50.2](../assets/mvolt-extended-limits.png)
+| Section | Controls |
+| --- | --- |
+| **Clock offsets** | Minimum and maximum offsets for Core, Memory, XBAR, SYS and Video |
+| **Power & voltage** | Power limit, board input current, NVVDD/MSVDD voltage ceilings and NVVDD/MSVDD OCP maximums |
+| **Fans** | Logical fan-channel count and PWM frequency |
+
+![BIOS override](../assets/mvolt-bios-override.png)
 
 Choose **Direct** to edit limits without a BIOS file, or **BIOS file** to use a
 BIOS copy. Direct is the default. Available methods depend on the driver; hover
 over an unavailable method for the reason. Existing saved limits remain manageable.
 
-**Neither method flashes the card's BIOS.** Limits are saved in this Windows
-installation and remain active across reboots until reverted. The displayed
-maxima are not recommended settings or a guarantee of stability.
+Both methods save an override in this Windows installation without flashing
+the card's BIOS. Saved overrides remain active across reboots until reverted.
 
 ### Load, save and apply
 
-1. Select the intended GPU, open Extend limits and choose a method. **Direct**
+1. Select the intended GPU, open BIOS override and choose a method. **Direct**
    needs no file. For **BIOS file**, use **Load BIOS file…** if a copy is needed;
    loading only previews it. See [BIOS copy](#bios-copy).
-2. Change the supported **New maximum** values you want to adjust, then choose
-   **Save limits**. Unedited rows keep their settings.
+2. Edit the **New minimum**, **New maximum** or fan settings you want to change,
+   then choose **Save limits**. Unedited rows keep their settings.
 3. Choose the offered **Restart GPU** or **Restart Windows** action. Save work first; the display
    may briefly go blank during a GPU restart. **Later** leaves the changes pending.
 4. Wait for confirmation that the limits are active.
 5. Return to the dashboard, enter your tuning targets and choose **Apply changes**.
 
-**Saving a ceiling does not apply a memory offset, watt target or current target.**
-The last step is still required.
+Saving limits changes the available tuning range. Set the actual clock, voltage,
+power or current target on the dashboard afterwards.
 
 | Column | Meaning |
 | --- | --- |
-| **Active maximum** | The ceiling currently in effect |
+| **BIOS default** | Original clock range or firmware operating default for power/current controls |
+| **Active / Active maximum** | The range, ceiling or fan setting currently in effect |
 | **Theoretical max.** | Guidance only; not a guaranteed working or safe limit |
-| **New maximum** | The ceiling you want to save; it is not active yet |
+| **New minimum / New maximum / New** | The value you want to save |
 
-An unavailable row does not prevent another supported row from being used.
-Theoretical values are guidance, not a separate input cap. A higher entry may
-be accepted without producing a higher usable limit.
+Each control is checked independently. An unavailable row leaves the other
+supported controls usable. Voltage ceilings have no separate operating default,
+so their **BIOS default** column shows a dash. The window scrolls on smaller displays.
 
 The NVVDD and MSVDD rows set the BIOS-declared voltage ceilings. Their effect
 still depends on the card's voltage regulation; raising one may have no effect
 on the voltage limit the card can reach.
+
+**NVVDD OCP maximum** and **MSVDD OCP maximum** set each rail's available current
+limit in amps, independently of board power and board input current.
+
+**Fan layout** selects 0–4 logical channels. **PWM frequency** selects 25 or
+27 kHz and is separate from fan duty and RPM targets. **Mixed** means the active
+channels use different frequencies. Fan settings use the same Save and restart
+steps as the other overrides.
 
 To switch the method of saved limits, choose the other method and follow the
 restart steps. Once the original limits are confirmed, previous entries return
@@ -1450,7 +1478,7 @@ GPU from starting. Prefer a copy from your own card.
 
 The recorded starting state may already include earlier modifications; it is
 not necessarily factory stock. Dashboard **Reset all** does not remove saved
-extended limits. Explicit override removal requires a full Windows restart;
+BIOS overrides. Explicit override removal requires a full Windows restart;
 use **Restart Windows** or **Later** when those are the offered actions.
 
 Keep `%PROGRAMDATA%\mVolt+\NativeLimits`. Deleting it does not remove an active
@@ -1535,6 +1563,7 @@ includes these readings:
 | `power_limits.requested_mw` | Requested board power limit in milliwatts |
 | `power_limits.enforced_mw` | Limit currently enforced by the driver, in milliwatts |
 | `power_limits.default_mw` | Driver-reported default board power limit |
+| `power_client.fe_mw` | Ordinary board-power request in milliwatts, or `null` when no request is set |
 | `thermal_inputs` | Channels 1/2/3/4/5, availability, substitution state, Celsius/raw input and confirmation state |
 
 Unavailable readings are `null`, not zero. A default thermal input has
@@ -1665,7 +1694,8 @@ curves. `--diagnostic` creates a local compatibility report.
 | Backup before the first watt-cap profile save | `.before-power-cap.json` beside the profile file; kept for returning to an older version |
 | Backup before the first thermal-input profile save | `.before-thermal-inputs.json` beside the profile file; kept for returning to an older version |
 | Watt-cap ownership and recovery | Per-adapter `power-cap-<id>.txt` under `%LOCALAPPDATA%\mVolt+`; separate from profiles |
-| BIOS-override recovery | `%PROGRAMDATA%\mVolt+\NativeLimits`; keep this while using Extend limits |
+| RTSS visibility | A `.rtss` file beside the per-GPU profile file |
+| BIOS-override recovery | `%PROGRAMDATA%\mVolt+\NativeLimits`; keep this while using BIOS override |
 | Startup/profile logs | Size-limited logs under `%LOCALAPPDATA%\mVolt+` |
 | Clock and boost-reason histories | Recent readings kept while the app runs; cleared on exit |
 | Installed startup executable | Per-user/per-adapter directory under `%ProgramFiles%\mVolt+` |
@@ -1764,7 +1794,7 @@ values too.
 <summary><strong>The profile selector says Custom after reopening</strong></summary>
 
 mVolt+ could not identify a matching saved profile; tuning may still be applied.
-Compare Overview with the profile preview. See [Profiles](#profiles).
+Compare Overview with the profile's **Details**. See [Profiles](#profiles).
 
 </details>
 

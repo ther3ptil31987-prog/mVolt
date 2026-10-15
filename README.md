@@ -17,25 +17,24 @@ experimental; available controls depend on the GPU, VBIOS and driver.
 Run the executable; no installer is needed. Tuning requires administrator
 privileges.
 
-This README and the guide cover **mVolt+ v0.50.2**. Check the release page for
+This README and the guide cover **mVolt+ v0.50.x**. Check the release page for
 the currently downloadable version.
 
-## v0.50.2 highlights
+## v0.50.x highlights
 
-Major features and improvements from v0.50.1 and v0.50.2:
-
-- **Extend limits:** change supported memory, power, board-current and NVVDD/MSVDD ceilings. Use Direct without a BIOS file, or the BIOS-file method where available. Neither flashes the card. [Guide](docs/guide.md#extend-limits).
-- **Power and current:** percentage or watt-based power control, plus a separate board-input current control with profile and Overview support.
-- **Fan control:** a unified mVolt / GPU editor, direct curve fields and experimental GPU policies saved in profiles, including startup Apply, then exit.
+- **BIOS override:** Direct and BIOS-file methods for clock-offset ranges, power/current limits and NVVDD/MSVDD voltage and OCP ceilings, with BIOS defaults beside active values. [Guide](docs/guide.md#bios-override).
+- **Power and current:** percentage or watt-based power control, separate board-input current control, and profile and Overview support.
+- **Fan control:** a unified mVolt / GPU editor with temperature, PWM and RPM fields, saved GPU policies and startup Apply, then exit. BIOS override adds fan layout and PWM frequency controls.
 - **Thermal limit:** a separate temperature-limit control in °C, with profile support and Reset.
-- **Minimal / Compact:** a smaller dashboard with expandable fan and thermal rows, independent overvoltage switches and visibility controls.
-- **Telemetry:** expanded GPU and memory temperatures, firmware-reported Vrel and ASIC information with Speedo and a copyable ECID where available.
-- **RTSS overlay:** profile and Boost Lock state, clocks, temperatures, fans, power, GPU load and VRAM, now joined by FPS, frame time, average FPS and lows, with grouped settings and a preview.
-- **Shunt multiplier:** an optional correction for supported power and current readings, including RTSS.
-- **Profiles and automation:** normal profiles, full snapshots, clearer save previews and the applied profile name in `--status` JSON.
-- **Shortcuts:** global profile shortcuts and a separate Toggle Boost Lock shortcut.
-- **Everyday use:** clearer hover help, scrolling in long profile menus, corrected slider behavior and better window handling across displays.
-- **Recovery:** improved Apply and Reset All, curve preservation, limit-method switching and startup recovery for stored overrides.
+- **Curves:** Core and fabric V/F editing, software fan curves, precise point selection and dragging, and improved curve preservation during Apply and Reset.
+- **Dashboard:** Standard and Minimal / Compact layouts, expandable fan and thermal rows, independent overvoltage switches and visibility, corrected sliders, a memory-clock header reading and Enter-to-apply.
+- **Profiles:** normal profiles and full snapshots, a redesigned selector with save, overwrite and delete actions, clear save previews, compact details, editable names and shortcuts, and the applied profile name in `--status` JSON.
+- **Telemetry:** expanded GPU and memory temperatures, firmware-reported Vrel, ASIC information with Speedo and a copyable ECID, and older memory V/F model support.
+- **RTSS overlay:** GPU readings, profile and Boost Lock state, FPS, frame time, average FPS and lows, with grouped settings and a preview.
+- **Shortcuts:** global profile shortcuts, Toggle Boost Lock and Toggle RTSS overlay, including tray operation.
+- **Shunt multiplier:** correction for power and current readings, board-power Request and Runtime limits, and RTSS.
+- **Everyday use:** clearer hover help, accessible profile menus, background saves and improved window handling across displays and scaling changes.
+- **Recovery and compatibility:** improved Apply, Reset all, limit-method switching, startup recovery and restart handling, plus broader support for older GPUs and laptop power/current controls.
 
 [Release notes](https://github.com/b00nz/mVolt/releases) · [Get a BIOS copy](docs/guide.md#bios-copy)
 
@@ -58,7 +57,8 @@ Major features and improvements from v0.50.1 and v0.50.2:
 - **Power and cooling:** percentage or watt-based power control, board input
   current, Voltage Boost, NVVDD/MSVDD OCP, thermal limit, fixed fan duty and
   software or supported GPU fan-policy editing.
-- **Extended limits:** use Direct or a BIOS file to change supported ceilings.
+- **BIOS override:** use Direct or a BIOS file to change clock ranges, voltage,
+  power and current limits, fan layout and PWM frequency.
   Saved limits persist in this Windows installation until reverted; neither method flashes the card.
 - **Monitoring:** rail and ADC readings, clock graphs, power, P-states,
   temperatures, boost-limit reasons, memory timings, memory pressure, PCIe traffic
@@ -76,31 +76,29 @@ each setting changes and what can limit its effect.
 
 ## Profiles and automation
 
-Profiles save applied settings and enabled/disabled switches. Loading a profile
+Profiles save applied settings and enabled/disabled switches. Applying a profile
 restores its saved switches.
 
 | Mode | What applying it does |
 | --- | --- |
-| **Normal / Only enabled settings** (default) | Applies settings enabled in the profile. Other GPU settings stay unchanged. |
+| **Normal** (default) | Applies settings enabled in the profile. Other GPU settings stay unchanged. |
 | **Full snapshot** | Restores all settings saved in the profile, including disabled controls. Settings missing from the profile stay unchanged. |
 
-The first new-profile save asks which mode to use. The choice is remembered
-for this GPU and can be changed in
-**Profile Manager → New profile mode** or overridden for one save. Existing
-profiles keep their saved mode. Enabled-only previews omit disabled settings;
-full snapshots show all captured values.
+The save form's **Full snapshot** checkbox is off by default. A successful
+new-profile save remembers your choice for this GPU. Overwriting a profile
+keeps its existing mode. Normal previews omit disabled settings; full snapshots
+show all captured values.
 
 Saving or overwriting a profile saves applied settings in both modes. Unapplied
 edits stay in the editor. Controls enabled only for an unapplied edit are not
 saved as enabled. Switching a control off keeps it disabled in the profile.
 Existing profiles keep their saved settings until overwritten.
 
-**Load for editing** loads the profile for editing without applying it.
-**Apply profile**, double-clicking a profile in the list, selecting one from the
-header menu or using its global shortcut applies it immediately.
-Profiles can also be selected for application at Windows logon.
-Editing an existing profile's shortcut saves it immediately without changing
-its tuning values or requiring a profile update.
+Select a profile from the header menu or use its global shortcut to apply it
+immediately. The selector offers **Details**, **Overwrite** and **Delete** beside
+each profile, plus **Save current as…**. Details shows the saved settings and
+lets you rename the profile or change its shortcut. Shortcut changes save
+without overwriting tuning values.
 
 On supported GPUs, applying a watt target also aligns the board-power request
 with it. Applying a percentage profile releases a cap owned by mVolt+ first.
@@ -118,8 +116,8 @@ In **Settings → General**, enable **Start with Windows** and choose whether to
 enable **Apply startup profile, then exit** to close after applying it.
 Software fan curves require mVolt+ to stay running.
 Supported GPU fan policies can also be saved in profiles and used with Apply, then exit.
-Set the separate Boost Lock shortcut in **Settings → Hotkeys**; it works while
-mVolt+ is running, including in the tray.
+Set **Toggle Boost Lock** and **Toggle RTSS overlay** in **Settings → Hotkeys**.
+Both work while mVolt+ is running, including in the tray.
 
 [Profile guide](docs/guide.md#profiles) · [Startup and tray](docs/guide.md#startup-and-tray)
 
@@ -179,9 +177,9 @@ can clear them. **Software fan curves need mVolt+ running to follow temperature*
 the tray is sufficient. Fully exiting leaves the last fan duty fixed.
 Resetting fans to auto returns control to the GPU firmware.
 
-**Extended limits** remain active across reboots until
+**BIOS overrides** remain active across reboots until
 reverted. Saving limits does not apply dashboard tuning targets. Follow the
-[limits guide](docs/guide.md#extend-limits), and keep the saved recovery data.
+[BIOS override guide](docs/guide.md#bios-override), and keep the saved recovery data.
 
 GPU tuning can cause instability or hardware damage. A setting accepted by the
 driver is not proof of stability; a reported device limit is not a safe-voltage
@@ -207,23 +205,24 @@ changed settings, or `null` when the applied profile cannot be verified.
 
 ## Screenshots
 
-Screenshots show v0.50.1 unless noted; the Extend limits screenshot shows v0.50.2.
-The tuning values shown are examples, not recommended settings.
+Screenshots from the v0.50.x series.
 
-### Minimal / Compact — v0.50.1
+### Minimal / Compact
 
 ![mVolt+ Minimal dashboard](assets/mvolt-minimal.png)
 
-### Tuning Overview — v0.50.1
+### Tuning Overview
 
 ![Tuning Overview](assets/mvolt-overview.png)
 
 <details>
-<summary><strong>Standard dashboard and Profile Manager</strong></summary>
+<summary><strong>Standard dashboard and profiles</strong></summary>
 
 ![mVolt+ dashboard](assets/mvolt-dashboard.png)
 
-![Profile Manager](assets/mvolt-profiles.png)
+![Profile selector](assets/mvolt-profile-menu.png)
+
+![Profile details](assets/mvolt-profile-details.png)
 
 </details>
 
@@ -241,11 +240,11 @@ The tuning values shown are examples, not recommended settings.
 </details>
 
 <details>
-<summary><strong>V/F editor and extended limits</strong></summary>
+<summary><strong>V/F editor and BIOS override</strong></summary>
 
 ![V/F Curve Editor](assets/mvolt-vf-curve-editor.png)
 
-![Extend limits — v0.50.2](assets/mvolt-extended-limits.png)
+![BIOS override](assets/mvolt-bios-override.png)
 
 </details>
 
@@ -269,6 +268,10 @@ The tuning values shown are examples, not recommended settings.
 
 mVolt+ is an independent third-party project, not affiliated with or endorsed
 by NVIDIA. NVIDIA, GeForce and RTX are trademarks of NVIDIA Corporation.
+
+## Contact
+
+[b00nzamvolt@gmail.com](mailto:b00nzamvolt@gmail.com)
 
 ## Credits
 
