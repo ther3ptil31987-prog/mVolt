@@ -33,10 +33,14 @@ for details. Screenshots are from the v0.50.x series.
 ## How the dashboard works
 
 The header identifies the selected GPU, driver and VBIOS. Its live readings show
-core and memory clocks, voltage, power, GPU temperature and supported hotspot temperature.
+supported XBAR and SYS clocks, memory and core clocks, voltage, power, GPU
+temperature and supported hotspot temperature.
 GDDR6X/GDDR7 memory uses command-clock MHz; hover for the driver-reported frequency.
-Below the readings, the profile selector sits beside **Reset all** and **Settings**
-and shows the recognized saved profile or **Custom**.
+Below the readings, **Save**, **Reset all** and **Settings** sit beside the
+profile selector, which shows the recognized saved profile or **Custom**. Its dot
+is green while the applied settings match that profile, amber after you apply
+other changes, and grey for **Custom**. **Save** stores the applied settings in
+the changed profile; under **Custom** it opens **Save current as…**.
 
 | Label or action | Meaning |
 | --- | --- |
@@ -46,7 +50,7 @@ and shows the recognized saved profile or **Custom**.
 | **Applied** | The setting currently reported by the driver, separate from measured behavior |
 | **Live** | A changing measurement, such as clock, watts or RPM |
 | **Allowed** | The editing range available in the current configuration |
-| **Review…** | Lists pending changes before you apply them |
+| **Review…** | Lists pending changes before you apply them; the latest status appears beside it, and failures show in red |
 | **Apply changes** | Applies the values in enabled controls and checks the result |
 | **Reapply enabled** | Sends enabled targets again, even with no numeric edits pending |
 | **Discard pending** | Discards unapplied edits. Tile and V/F switches stay as they are |
@@ -60,6 +64,8 @@ Minimal uses shared actions and row context menus instead of per-card buttons.
 
 Slider, stepper and text edits are pending until Apply. A card-specific Apply
 acts on that card; **Apply fans** acts on the fan tile. Other edits remain pending.
+In Standard, each card keeps **Apply** beside **Reset**; Apply stays grey until
+that card has a change to apply, including after you return to the applied value.
 Pressing **Enter** in a numeric field applies that control. In the V/F and fan
 editors, Enter applies the current curve or policy.
 Reset is immediate and needs no second Apply.
@@ -698,7 +704,9 @@ does not change the GPU. Opening or switching curves never enables them.
 | Selected MHz → Set point | Sets the selected point's pending frequency |
 | Point offset → Set offset | Sets the selected points' pending frequency offsets |
 | Enter in a frequency or offset field | Applies the selected curve with the entered value |
-| Flatten above | Flattens the pending curve from the selected point through higher-voltage points, keeping the current graph scale |
+| Flatten above | Sets the selected point to **Selected MHz** and flattens the points after it, keeping the current graph scale |
+| Flatten above chevron | Chooses **Drop tail** (default) or **Match tail**; the choice is remembered |
+| Info button beside the chevron | Previews both modes on this curve |
 | Lock voltage point (Core only) | Immediately requests the selected point's voltage bin; click Release voltage point to release it |
 | Limit max clock (Core only) | Immediately caps core frequency at the selected point's displayed frequency, including pending edits; click Release clock limit to release it |
 | Undo / Redo | Restores pending edits; a drag is one history step |
@@ -740,6 +748,16 @@ the voltage and clocks actually reached; use Telemetry to inspect those readings
 
 **Flatten above does not lock voltage.** It shapes frequency at higher-voltage
 points; the GPU still selects an operating point under its active limits.
+
+| Mode | What it does |
+| --- | --- |
+| **Drop tail** (default) | Sets the later points to a combined −1000 MHz offset, or lower where needed, so they stay flat. This is the generally recommended way to undervolt. |
+| **Match tail** | Gives each later point its own offset: exact now, but warming can lift some above the selected point. |
+
+The preview's warming slider illustrates how heat from real workloads could shift
+each tail. Hollow dots mark lowered points that the driver lifts to the plateau. Voltages past the
+rail's current voltage limit are shaded and their points dimmed; hovering such a
+point shows the limit.
 
 ### Core live readings and locks
 
@@ -956,19 +974,22 @@ a tuning profile.
 ### Header profile menu
 
 Open the profile selector beside **Reset all** and **Settings**. Each row shows
-the profile name, save mode and an indicator for the active profile.
+the profile name and save mode, and a dot on the active profile. A row's actions
+appear when you hover over it or select it with the keyboard.
 
 | Action | What it does |
 | --- | --- |
 | Click the profile name | Applies the saved profile immediately |
-| Details (gear) | Opens the saved parameters, name and shortcut |
-| Overwrite (disk) | Saves current applied settings into that profile, keeping its save mode |
+| Details (info icon) | Opens the saved parameters, name, shortcut and logon option |
+| Overwrite (disk) | Saves current applied settings into that profile after confirmation, keeping its save mode |
 | Delete (trash) | Removes the profile after confirmation |
 | Save current as… | Opens a new-profile form with a preview and save-mode choice |
 
 Use the mouse wheel or keyboard to navigate a long menu. In **Details**, edit
-the name and press Enter to save it, or capture a new shortcut. Profile changes
-save in the background, with feedback in the dashboard status bar.
+the name and press Enter to save it, or capture a new shortcut. **Apply this
+profile at logon** makes it the startup profile. **Load for editing** stages its
+settings on the dashboard without applying them. Profile changes save in the
+background, with feedback in the dashboard status bar.
 
 ![Profile selector](../assets/mvolt-profile-menu.png)
 
@@ -980,13 +1001,15 @@ Choose **Save current as…**, enter a name, choose the save mode,
 review the parameter preview and click **Save**. Open **Details** to inspect
 saved parameters or set the new profile's shortcut.
 
-To update a profile, apply it, make and apply your dashboard changes, then use
-that profile's **Overwrite** icon. Saving and overwriting run in the background
-and capture applied settings; pending edits stay in the editor.
+To update a profile, apply it, make and apply your dashboard changes, then
+click the header **Save** button, or use that profile's **Overwrite** icon.
+Saving and overwriting run in the background and capture applied settings;
+pending edits stay in the editor. The saved profile becomes the current profile.
 
 After an apply, mVolt+ can recognize the profile on the next launch if the GPU
 settings still match, without applying it again. **Custom** means no saved
-profile is currently identified as active.
+profile is currently identified as active; the header **Save** then opens
+**Save current as…**.
 
 Both modes save applied curve and fan settings, leaving out pending changes.
 A running fan curve's changing duty is a live reading, not a pending edit.
@@ -1010,10 +1033,12 @@ or as a visible window. Enable **Apply startup profile, then exit** to close
 after successfully applying your selected startup profile. This option refuses
 profiles with a software fan curve, which requires mVolt+ to stay running.
 
-If a startup profile is already configured, mVolt+ applies it automatically.
+Choose the startup profile with **Apply this profile at logon** in that profile's
+**Details**; checking it also turns on Start with Windows. If a startup profile
+is configured, mVolt+ applies it automatically.
 Without one, the app starts without applying tuning. A successfully applied profile is
 shown by name; the header menu marks it with a green dot and the tray menu with
-a checkmark. Custom settings leave the saved-profile entries unmarked.
+a checkmark. Custom or changed settings leave the tray entries unchecked.
 
 mVolt+ waits for the GPU to become ready before applying your startup profile.
 You do not need to open NVIDIA Control Panel. If application fails, mVolt+
@@ -1249,11 +1274,12 @@ a narrow single-column layout, on later launches and after Windows logon.
 If the saved monitor is unavailable or its work area is smaller, the window is
 moved or fitted to the available display. Maximized state is saved separately.
 
-**Debug report…** and **Project / help** are in General. Tray preferences are
+**About** and **Debug report…** are in General. Tray preferences are
 explained in [Startup and tray](#startup-and-tray). Tile visibility lives in
 **Sections → Show/Hide tiles**. Choose the profile save mode in the save form.
 Debug report creates a local diagnostic report; it is not sent automatically.
-Project / help opens the project's page.
+About shows the version, a link to the project page and third-party notices,
+including the license text of the included PawnIO modules.
 
 **Reset app preferences** restores this GPU's app preferences to fresh-install
 defaults: no Quick tuning pins, all sections expanded and tiles visible, voltage
@@ -1271,7 +1297,8 @@ intervals reduce updates and also slow software fan-curve responses.
 
 **Pause when minimized or in tray** pauses general monitoring unless a visible
 monitoring window or overlay needs it. An active fan curve still performs its
-required temperature checks.
+required temperature checks. NVML readings are collected only while Telemetry or
+Overview is open, or an overlay GPU-load or power line is selected.
 
 To use RTSS, run RivaTuner Statistics Server, enable **Show telemetry in the RTSS
 overlay**, and choose your readings. RTSS must also display its overlay in the
@@ -1283,6 +1310,22 @@ core/memory/fabric clocks, GPU/hotspot/memory temperatures, fan duty/RPM, power
 versus enforced limit, GPU load and VRAM used/total. Use the group buttons to
 find each option; the **Overlay preview** shows the selected lines. Missing or
 stale GPU readings are omitted. VRAM usage is for the whole GPU, not just the current game.
+
+Drag a line in the preview to change its position in the overlay. Right-click a
+line to set its label or value color, or to reset them.
+
+The **CPU** and **Memory** groups add system readings:
+
+| Reading | Source |
+| --- | --- |
+| CPU load, RAM used / total, RAM speed | Windows |
+| CPU effective clock, CPU temperature, CPU power | [PawnIO](https://pawnio.eu) |
+| RAM temperature (hottest DDR5 module) | [PawnIO](https://pawnio.eu) |
+
+PawnIO is a free signed driver that you install separately; mVolt+ includes only
+its small read modules. Both groups show the PawnIO status, and **Get PawnIO ↗**
+opens its download page while it is missing. mVolt+ releases PawnIO when no
+PawnIO line is selected, so it can be updated or removed without restarting.
 
 The **Frame rate** group adds FPS, frame time, average FPS, 1% low and 0.1% low.
 RTSS supplies these values in the target application. Start RTSS benchmark
@@ -1375,17 +1418,19 @@ into three sections:
 | Section | Controls |
 | --- | --- |
 | **Clock offsets** | Minimum and maximum offsets for Core, Memory, XBAR, SYS and Video |
-| **Power & voltage** | Power limit, board input current, NVVDD/MSVDD voltage ceilings and NVVDD/MSVDD OCP maximums |
+| **Power & voltage** | Power limit, board input current, NVVDD/MSVDD voltage ceilings, NVVDD/MSVDD OCP maximums and Speedo |
 | **Fans** | Logical fan-channel count and PWM frequency |
 
 ![BIOS override](../assets/mvolt-bios-override.png)
 
 Choose **Direct** to edit limits without a BIOS file, or **BIOS file** to use a
-BIOS copy. Direct is the default. Available methods depend on the driver; hover
-over an unavailable method for the reason. Existing saved limits remain manageable.
+BIOS copy. Direct is the default. BIOS file needs NVIDIA driver 616 or newer;
+hover over an unavailable method for the reason. Existing saved limits remain manageable.
 
 Both methods save an override in this Windows installation without flashing
 the card's BIOS. Saved overrides remain active across reboots until reverted.
+The first time you open BIOS override, a short note explains both methods, how
+to get a BIOS copy and this persistence.
 
 ### Load, save and apply
 
@@ -1419,6 +1464,11 @@ on the voltage limit the card can reach.
 
 **NVVDD OCP maximum** and **MSVDD OCP maximum** set each rail's available current
 limit in amps, independently of board power and board input current.
+
+**Speedo** overrides the Speedo value the driver reports for this GPU; its effect
+on voltage and clocks depends on the driver and firmware. **Active** matches the
+Telemetry reading. A Speedo-only change can be saved with either method, without
+a BIOS copy.
 
 **Fan layout** selects 0–4 logical channels. **PWM frequency** selects 25 or
 27 kHz and is separate from fan duty and RPM targets. **Mixed** means the active
@@ -1484,16 +1534,18 @@ use **Restart Windows** or **Later** when those are the offered actions.
 Keep `%PROGRAMDATA%\mVolt+\NativeLimits`. Deleting it does not remove an active
 override and can lose the saved starting state. If it is missing, reopen mVolt+
 and follow the recovery action offered in this dialog; **Revert changes** can
-remove an override that no longer has recovery data. If recovery still fails,
-keep the remaining files and [report the issue](https://github.com/b00nz/mVolt/issues).
+remove an override that no longer has recovery data. When offered, **Repair
+permissions** fixes access to that folder and checks again, keeping GPU settings
+and recovery files. If recovery still fails, keep the remaining files and
+[report the issue](https://github.com/b00nz/mVolt/issues).
 
 <details>
 <summary><strong>Recovery when the NVIDIA driver cannot start</strong></summary>
 
-If mVolt+ offers startup recovery, choose **Remove BIOS override** to remove the
-stored override for the affected GPU. After removal, choose **Restart Windows**
-or **Later**. Restart Windows before checking the GPU again. Removal does not
-restart Windows automatically.
+If Windows cannot start the GPU (Code 43) while a BIOS override is stored,
+mVolt+ offers startup recovery. Choose **Remove BIOS override**, then **Restart
+GPU**, **Restart Windows** or **Later**. If the GPU recovers, mVolt+ reopens on
+it; otherwise restart Windows. Nothing restarts automatically.
 
 If the saved recovery data is intact, open an administrator PowerShell window
 in the mVolt+ folder. Replace `RECORD_ID` with the 64-character folder name for

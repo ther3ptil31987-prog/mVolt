@@ -22,18 +22,18 @@ the currently downloadable version.
 
 ## v0.50.x highlights
 
-- **BIOS override:** Direct and BIOS-file methods for clock-offset ranges, power/current limits and NVVDD/MSVDD voltage and OCP ceilings, with BIOS defaults beside active values. [Guide](docs/guide.md#bios-override).
+- **BIOS override:** Direct and BIOS-file methods for clock-offset ranges, power/current limits, NVVDD/MSVDD voltage and OCP ceilings and Speedo, with BIOS defaults beside active values and Restart GPU recovery. [Guide](docs/guide.md#bios-override).
 - **Power and current:** percentage or watt-based power control, separate board-input current control, and profile and Overview support.
 - **Fan control:** a unified mVolt / GPU editor with temperature, PWM and RPM fields, saved GPU policies and startup Apply, then exit. BIOS override adds fan layout and PWM frequency controls.
 - **Thermal limit:** a separate temperature-limit control in °C, with profile support and Reset.
-- **Curves:** Core and fabric V/F editing, software fan curves, precise point selection and dragging, and improved curve preservation during Apply and Reset.
-- **Dashboard:** Standard and Minimal / Compact layouts, expandable fan and thermal rows, independent overvoltage switches and visibility, corrected sliders, a memory-clock header reading and Enter-to-apply.
-- **Profiles:** normal profiles and full snapshots, a redesigned selector with save, overwrite and delete actions, clear save previews, compact details, editable names and shortcuts, and the applied profile name in `--status` JSON.
+- **Curves:** Core and fabric V/F editing, Flatten above with Drop tail / Match tail and a warming preview, software fan curves, precise point selection and dragging, and improved curve preservation during Apply and Reset.
+- **Dashboard:** Standard and Minimal / Compact layouts, expandable fan and thermal rows, independent overvoltage switches and visibility, corrected sliders, memory, XBAR and SYS clock header readings, per-card Apply beside Reset and Enter-to-apply.
+- **Profiles:** normal profiles and full snapshots, a redesigned selector with save, overwrite and delete actions and an active-profile dot, a header Save button, clear save previews, compact details with Load for editing, editable names and shortcuts, and the applied profile name in `--status` JSON.
 - **Telemetry:** expanded GPU and memory temperatures, firmware-reported Vrel, ASIC information with Speedo and a copyable ECID, and older memory V/F model support.
-- **RTSS overlay:** GPU readings, profile and Boost Lock state, FPS, frame time, average FPS and lows, with grouped settings and a preview.
+- **RTSS overlay:** GPU readings, profile and Boost Lock state, FPS, frame time, average FPS and lows, plus CPU and RAM readings through the optional PawnIO driver, with grouped settings, reorderable lines, custom colors and a preview.
 - **Shortcuts:** global profile shortcuts, Toggle Boost Lock and Toggle RTSS overlay, including tray operation.
 - **Shunt multiplier:** correction for power and current readings, board-power Request and Runtime limits, and RTSS.
-- **Everyday use:** clearer hover help, accessible profile menus, background saves and improved window handling across displays and scaling changes.
+- **Everyday use:** clearer hover help, accessible profile menus, background saves, fully drawn menus and windows, and improved window handling across displays and scaling changes.
 - **Recovery and compatibility:** improved Apply, Reset all, limit-method switching, startup recovery and restart handling, plus broader support for older GPUs and laptop power/current controls.
 
 [Release notes](https://github.com/b00nz/mVolt/releases) · [Get a BIOS copy](docs/guide.md#bios-copy)
@@ -96,9 +96,11 @@ Existing profiles keep their saved settings until overwritten.
 
 Select a profile from the header menu or use its global shortcut to apply it
 immediately. The selector offers **Details**, **Overwrite** and **Delete** beside
-each profile, plus **Save current as…**. Details shows the saved settings and
-lets you rename the profile or change its shortcut. Shortcut changes save
-without overwriting tuning values.
+each profile, plus **Save current as…**. Its dot is green while the applied
+settings match the profile, amber after changes and grey for Custom; the header
+**Save** button stores the changes. Details shows the saved settings, lets you
+rename the profile or change its shortcut, and offers **Load for editing**.
+Shortcut changes save without overwriting tuning values.
 
 On supported GPUs, applying a watt target also aligns the board-power request
 with it. Applying a percentage profile releases a cap owned by mVolt+ first.
@@ -112,8 +114,9 @@ curves are left out. Full snapshots save supported curves even when disabled.
 A profile that does not contain a curve leaves it unchanged.
 
 In **Settings → General**, enable **Start with Windows** and choose whether to
-**Start minimized to tray**. A selected startup profile applies either way;
-enable **Apply startup profile, then exit** to close after applying it.
+**Start minimized to tray**. Choose the startup profile with **Apply this profile
+at logon** in the profile's Details; it applies either way. Enable **Apply startup
+profile, then exit** to close after applying it.
 Software fan curves require mVolt+ to stay running.
 Supported GPU fan policies can also be saved in profiles and used with Apply, then exit.
 Set **Toggle Boost Lock** and **Toggle RTSS overlay** in **Settings → Hotkeys**.
@@ -143,7 +146,12 @@ RivaTuner Statistics Server is optional and only needed for its on-screen
 overlay. Choose the readings in **Settings → Monitoring**, including the applied
 profile, Boost Lock, clocks, temperatures, fan duty/RPM, power versus limit,
 GPU load, VRAM usage and frame statistics. Average FPS, 1% low and 0.1% low use
-RTSS benchmark recording. Grouped settings and an overlay preview help arrange the readings.
+RTSS benchmark recording. Grouped settings and an overlay preview help arrange the
+readings; drag a preview line to reorder it and right-click it for colors.
+
+CPU clock, temperature and power, and DDR5 RAM temperature, need the free
+[PawnIO](https://pawnio.eu) driver, which you install separately. Other CPU and
+RAM readings come from Windows.
 
 For a shunt-modded card, **Settings → Advanced tuning → Shunt multiplier** can
 correct supported power and current displays. It does not change tuning values.
@@ -265,6 +273,7 @@ Screenshots from the v0.50.x series.
 - Administrator privileges for tuning.
 - Working NVML support for GPU clock-range control and NVML telemetry.
 - RivaTuner Statistics Server only for the optional overlay.
+- PawnIO only for some optional CPU and RAM overlay readings.
 
 mVolt+ is an independent third-party project, not affiliated with or endorsed
 by NVIDIA. NVIDIA, GeForce and RTX are trademarks of NVIDIA Corporation.
