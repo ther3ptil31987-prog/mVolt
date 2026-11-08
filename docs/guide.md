@@ -12,7 +12,7 @@ for details. Screenshots are from the v0.50.x series.
 | [How the dashboard works](#how-the-dashboard-works) | Targets, switches, Apply, Reset and Discard |
 | [First start and tile presets](#first-start-and-tile-presets) | Three starting layouts and the complete tile table |
 | [Dashboard control reference](#dashboard-control-reference) | Every tile, grouped as it appears in the app |
-| [Power cap in watts](#power-cap-in-watts) | Watt targets, percentage limits and Reset |
+| [Power cap in watts](#power-cap-in-watts) | Watt targets, percentage limits, the laptop CPU+GPU budget and Reset |
 | [BIOS override](#bios-override) | Clock ranges, voltage/current limits, fan settings and recovery |
 | [Raising voltage and OCP on 621.01+](#raising-voltage-and-ocp-on-driver-62101-and-later) | Voltage offsets, higher voltage limits and OCP on RTX 50 |
 | [BIOS copy](#bios-copy) | Save a copy with GPU-Z or NVFlash |
@@ -130,6 +130,9 @@ logon or for command-line/read-only launches.
 | Thermal inputs | — | — | ✓ |
 | Thermal limits | — | — | ✓ |
 | **Visible tiles** | **11** | **17** | **22** |
+
+On laptops, the **CPU+GPU budget** tile joins Power cap (watts) in every preset;
+the counts above leave it out.
 
 Visibility does not guarantee hardware support; an unsupported control remains
 unavailable. Hiding a tile does not change its value or whether it is included
@@ -415,6 +418,16 @@ See [Power cap in watts](#power-cap-in-watts) for examples, limits and persisten
 </details>
 
 <details>
+<summary><strong>CPU+GPU budget</strong> — the CPU's share of a laptop's power budget</summary>
+
+Laptops only. Your Power cap is the GPU's part; this tile sets the CPU's share,
+and Apply sets the budget to the cap plus that share. Type the watts on your
+power adapter's label in **Adapter**. See
+[CPU+GPU budget on laptops](#cpugpu-budget-on-laptops).
+
+</details>
+
+<details>
 <summary><strong>Board input current limit</strong> — board-current limit, in amperes</summary>
 
 Sets the board's input-current request independently of its power budget and
@@ -591,7 +604,7 @@ reported maximum.
 | **Target** | The watt value being edited; without a cap it starts at the power limit in force on supported GPUs |
 | **Applied** | The cap read back from the driver, or **No cap** when no request exists |
 | **Live** | Measured board power, using the same reading as the percentage tile |
-| **Allowed** | 1 W through the driver's current maximum |
+| **Allowed** | 1 W through the driver's current maximum; where the cap raises the percentage, through the power its maximum gives |
 | **Pending** | An edit waiting for Apply; it is not yet the applied cap |
 
 ### Percentage and watt limits together
@@ -601,16 +614,42 @@ a watt target also updates the board-power request, so an older percentage
 setting does not keep that request lower. Below the ordinary minimum, the watt
 cap still provides the lower ceiling.
 
-Some GPUs support only an additional cap. On those systems, the existing
-percentage request remains separate and the lower request can limit power.
-Check **Requested limit** and **Enforced limit** in Telemetry → Power.
+Some GPUs support only an additional cap. Where the percentage limit sets the
+same power request there, a cap above the percentage raises the percentage with
+it, up to its maximum, so the percentage doesn't hold the GPU below your cap.
+A cap at or above the power that maximum gives, such as one another tool left,
+limits nothing: it shows no pending change and Apply leaves it. On laptops, and
+where the percentage does not set that request, the percentage request remains
+separate and the lower request can limit power. Check **Requested limit** and
+**Enforced limit** in Telemetry → Power.
 
 On laptops whose BIOS allows more power than the driver enforces, the cap also
-raises the laptop's own power request and its CPU+GPU budget by the same amount.
-Reset returns both. Desktop cards are unaffected.
+raises the laptop's own power request and its CPU+GPU budget by the same amount,
+and Dynamic Boost's GPU maximum to the cap. Dynamic Boost then sets the power
+request itself, up to that maximum, and Apply accepts its value. Reset returns
+all three. Desktop cards are unaffected.
 
 A cap is a ceiling, not a target for consumption. An idle GPU or a light workload
 can draw much less than the applied value.
+
+### CPU+GPU budget on laptops
+
+On laptops, the **CPU+GPU budget** tile appears beside the cap once mVolt+ has
+read the budget: after a Power cap Apply, and at every start while the tile is
+on. The cap is the GPU's part; the tile sets the CPU's share, and Apply sets the
+budget to the cap plus that share.
+
+- Type the watts on your power adapter's label in **Adapter**. The CPU's share
+  goes from the laptop's stock share up to that rating less the cap. Without a
+  rating it stays at the stock share.
+- The tile needs Power cap's switch and is off by default. Off, the next Power
+  cap Apply returns the stock share. **Reset** applies the cap in force with the
+  stock share.
+- A reboot returns the stock share, shown as **Auto** until an Apply or a
+  startup profile sets one again.
+- The tile doesn't limit the CPU itself; the BIOS or a tool such as ThrottleStop
+  does. If the CPU draws more than its share, the GPU gets less.
+- Profiles keep the share. Desktop cards never show the tile.
 
 ### Reset and closing
 
@@ -1184,6 +1223,14 @@ mVolt+ waits for the GPU to become ready before applying your startup profile.
 You do not need to open NVIDIA Control Panel. If application fails, mVolt+
 reports the error without automatically repeating the Apply.
 
+**after … s** beside the startup profile sets how long Windows waits after you
+sign in before it starts mVolt+, from 10 to 300 seconds; 10 is the default, 20 on
+laptops with Dynamic Boost. Type
+the seconds and choose **Set**. On a laptop whose own control app changes the GPU
+power request or CPU+GPU budget right after the profile applies, mVolt+ applies
+the profile again after 5, 10 and 20 seconds. If the laptop still changes it,
+mVolt+ keeps the laptop's value and shows a warning; raise the delay then.
+
 If Windows confirms that the selected GPU is disconnected, automatic startup
 waits briefly and then exits quietly. Its startup task and profiles stay saved
 for when the GPU returns.
@@ -1458,8 +1505,11 @@ hover help **Update available:** and the version.
 defaults: no Quick tuning pins, all sections expanded and tiles visible, voltage
 range sliders, default sizing/theme, **Compact** profile details, monitoring and
 advanced options, an empty overlay layout and no saved overlay layouts. It also
-clears the new-profile mode choice, startup profile,
-start-in-tray option and **Check for updates at startup**. Saved profiles,
+clears the new-profile mode choice, **Start with Windows**, startup profile,
+start-in-tray option, **Apply startup profile, then exit**, **Check for updates
+at startup**, the **CPU+GPU budget** tile's switch and **Adapter**, and sets the
+**after … s** logon delay back to 10 s, or 20 s on laptops with Dynamic Boost.
+Saved profiles,
 currently applied GPU settings and the accepted initial warning are kept. Use
 the dashboard's **Reset all** to reset GPU tuning instead.
 
@@ -1517,13 +1567,18 @@ across rows.
 | Undo or redo | **Ctrl+Z** and **Ctrl+Y**, or the buttons above the editor |
 
 Right-click a row for **Rename…**, **Hide name**, **Label color**, **Value
-color**, **Split into lines**, **Remove** and **Reset**. Right-click a reading
-for its display formats, **Warn above…**, **Own row** and **Remove**. **Warn
-above…** draws the number in red above the value you enter. The header takes
-only a color.
+color**, **Opacity**, **Split into lines**, **Remove** and **Reset**. Right-click a
+reading for its display formats, **Rename unit…**, its own **Value color** and
+**Unit color**, **Warn above…**, **Own row** and **Remove**. Units follow their
+numbers and take the value's color unless you choose another. **Shift**+click a
+color to give it to every row or reading. **Warn above…** draws the number in red
+above the value you enter. The header takes only a color and an opacity.
 
 The **Layout** menu rearranges the rows with **One per line** or **Group by
-device**, or switches to the **Gaming**, **Tuning** or **Benchmark** preset.
+device**, sets **Space before units** and the overlay text's **Opacity** from
+100 % down to 20 %, or switches to the **Gaming**, **Tuning** or **Benchmark**
+preset. A row uses the overlay's opacity unless you give it its own; red
+warnings stay fully opaque.
 **Save layout…** keeps your layout in that menu under a name. **Copy layout** and
 **Paste layout** move a layout as text, to share it or use it on another GPU.
 **Reset** empties the layout. Changes save as you make them, with this GPU's
@@ -1638,6 +1693,13 @@ XOC follows the selected rail's reported device maximum where available. These
 are editing limits, not measured voltages or safe operating-voltage ratings.
 Both modes edit offsets; the resulting voltage limits can change with operating
 conditions.
+
+When the voltage limits are already above the standard ceiling, for example
+after a BIOS override raised them, **XOC voltage range** turns on by itself at
+launch and after **Restart GPU**, and profiles apply in the XOC range whatever
+they were saved with. This automatic range is not saved as your choice; it turns
+off again once an Apply or Reset brings the limits back into the standard range.
+A range you turned on yourself stays on.
 
 ### Shunt multiplier
 
@@ -1837,6 +1899,9 @@ To use the dashboard voltage limits again:
    the voltage-limit cards show **Set Voltage Boost to 0 %**.
 4. Once mVolt+ verifies the offsets, **Core voltage limits**, **MSVDD voltage
    limits** and **XOC voltage range** work as on older drivers.
+
+The driver keeps these voltage limits on its 5 mV steps, so a value in between
+reads back on a neighboring step, and Voltage boost moves in whole steps.
 
 Until the offsets are verified, Voltage boost is held at 0 %: profiles skip a
 higher value and the CLI refuses `--boost` above 0. After that, Voltage boost
@@ -2069,7 +2134,7 @@ They do not create a dashboard draft. Unspecified controls are left untouched.
 | `--boost-lock` | `on` or `off`; immediate action |
 | `--clock-range` | `MIN,MAX` in MHz, or `default` to release the lock |
 | `--thermal-input-0` through `--thermal-input-5` | Signed fixed temperature in Celsius, or `default` to disable that channel's substitution |
-| `--xoc` | Selects the extended voltage-ceiling mode for the request |
+| `--xoc` | Selects the extended voltage-ceiling mode for the request; needed only to raise limits above the standard ceiling |
 | `--profile` | Saved profile name or ID |
 | `--gpu` | Adapter index; default 0 for CLI selection |
 | `--gpu-id` | Stable adapter identity; takes precedence over the index |
@@ -2211,7 +2276,8 @@ See [Power cap in watts](#power-cap-in-watts).
 The cap limits consumption; it does not force the GPU to draw that much power.
 Workload, temperature or another GPU limit can hold consumption below it.
 Compare Requested and Enforced limits with measured board power in Telemetry.
-On adapters using an additional cap only, a lower percentage request can also bind.
+On laptops, and on adapters using an additional cap only where the percentage
+doesn't set the same request, a lower percentage request can also bind.
 
 </details>
 
@@ -2223,6 +2289,10 @@ file. Use a release that supports the setting, or keep a separate copy saved
 before using the watt-cap setting. The first save in the new format keeps a
 `.before-power-cap.json` backup beside the file; do not discard your current
 profiles while recovering an older copy.
+
+A profile that keeps a laptop CPU share does the same to v0.50.12 and older.
+Before going back, save that profile again with the **CPU+GPU budget** tile off,
+or delete it.
 
 See [Power controls in profiles](#power-controls-in-profiles).
 
@@ -2307,7 +2377,9 @@ See [Fan control and persistence](#fan-control-and-persistence).
 
 Read the startup warning and check the startup profile in **Settings →
 General**. Unsupported controls, unavailable GPU readings or an incomplete
-earlier attempt can prevent application.
+earlier attempt can prevent application. On a laptop whose own control app
+changes the power after you sign in, raise **after … s** beside the startup
+profile.
 See [Startup and tray](#startup-and-tray) and [Files and logging](#files-and-logging).
 
 </details>
